@@ -1,5 +1,12 @@
 export { Swarm } from './core/swarm.js';
 export { FormationLoader } from './core/formation.js';
 export { WormTypeRegistry } from './core/registry.js';
+export { Worm } from './core/worm.js';
+export { SwormEventBus } from './core/events.js';
+export { createPlatform } from './platform/index.js';
+export { GenericWorm } from './worms/generic-worm.js';
+export { ClaudeWorm } from './worms/claude-worm.js';
+export { IDEWorm } from './worms/ide-worm.js';
+export { AppWorm } from './worms/app-worm.js';
 export type { PlatformAPI, MonitorInfo, Rect } from './platform/types.js';
 export type { FormationConfig, WormConfig, Position } from './config/schema.js';

@@ -4,11 +4,10 @@ import { createPlatform } from '../platform/index.js';
 import { WormTypeRegistry } from '../core/registry.js';
 import { Swarm } from '../core/swarm.js';
 
-// Worm types — will resolve after worms branch is merged
-// import { GenericWorm } from '../worms/generic-worm.js';
-// import { ClaudeWorm } from '../worms/claude-worm.js';
-// import { IDEWorm } from '../worms/ide-worm.js';
-// import { AppWorm } from '../worms/app-worm.js';
+import { GenericWorm } from '../worms/generic-worm.js';
+import { ClaudeWorm } from '../worms/claude-worm.js';
+import { IDEWorm } from '../worms/ide-worm.js';
+import { AppWorm } from '../worms/app-worm.js';
 
 import { deployCommand } from './commands/deploy.js';
 import { killCommand } from './commands/kill.js';
@@ -42,11 +41,10 @@ function getSwarm(): Swarm {
     const platform = getPlatform();
     const registry = new WormTypeRegistry();
 
-    // Register worm types once worms branch is merged:
-    // registry.register('generic', GenericWorm);
-    // registry.register('claude', ClaudeWorm);
-    // registry.register('ide', IDEWorm);
-    // registry.register('app', AppWorm);
+    registry.register('generic', GenericWorm);
+    registry.register('claude', ClaudeWorm);
+    registry.register('ide', IDEWorm);
+    registry.register('app', AppWorm);
 
     _swarm = new Swarm(platform, registry);
   }
