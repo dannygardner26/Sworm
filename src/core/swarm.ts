@@ -93,11 +93,31 @@ export class Swarm {
     }
 
     this.activeFormation = formationName;
+
+    // Apply wallpaper mode if configured
+    if (config.mode === 'wallpaper') {
+      const { parentToDesktop, setWallpaperStyle } = await import('../platform/windows/wallpaper.js');
+      for (const worm of this.activeWorms.values()) {
+        if (worm.hwnd) {
+          setWallpaperStyle(worm.hwnd);
+          parentToDesktop(worm.hwnd);
+        }
+      }
+    }
+
     this.eventBus.emit('formation:deployed', formationName);
   }
 
   async kill(target?: string): Promise<void> {
     if (!target) {
+      // Remove wallpaper parenting before closing windows
+      const { removeWallpaperStyle } = await import('../platform/windows/wallpaper.js');
+      for (const worm of this.activeWorms.values()) {
+        if (worm.hwnd) {
+          try { removeWallpaperStyle(worm.hwnd); } catch {}
+        }
+      }
+
       // Kill all active worms
       const killPromises = [...this.activeWorms.values()].map(async (worm) => {
         await worm.kill();

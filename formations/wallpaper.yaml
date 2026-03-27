@@ -1,0 +1,44 @@
+name: wallpaper
+description: "Full-screen AI wallpaper — 4 agents per monitor in quadrants"
+mode: wallpaper
+
+worms:
+  - id: agent-1
+    type: generic
+    monitor: primary
+    position:
+      zone: top-left
+    wallpaper: true
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Agent 1"]
+
+  - id: agent-2
+    type: generic
+    monitor: primary
+    position:
+      zone: top-right
+    wallpaper: true
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Agent 2"]
+
+  - id: agent-3
+    type: generic
+    monitor: primary
+    position:
+      zone: bottom-left
+    wallpaper: true
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Agent 3"]
+
+  - id: agent-4
+    type: generic
+    monitor: primary
+    position:
+      zone: bottom-right
+    wallpaper: true
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Agent 4"]
