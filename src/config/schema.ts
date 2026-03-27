@@ -39,7 +39,7 @@ export type Position = z.infer<typeof PositionSchema>;
 
 export const WormConfigSchema = z.object({
   id: z.string(),
-  type: z.enum(['claude', 'ide', 'generic', 'app']),
+  type: z.enum(['claude', 'ide', 'generic', 'app', 'ai-agent']),
   monitor: z.string().default('primary'),
   position: PositionSchema,
   wallpaper: z.boolean().optional(),
