@@ -1,6 +1,6 @@
 {
   "name": "sworm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Spatially-aware desktop orchestration — deploy AI agents and apps across multi-monitor setups via named formations",
   "type": "module",
   "main": "dist/index.js",

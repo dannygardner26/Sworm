@@ -8,6 +8,8 @@ import { GenericWorm } from '../worms/generic-worm.js';
 import { ClaudeWorm } from '../worms/claude-worm.js';
 import { IDEWorm } from '../worms/ide-worm.js';
 import { AppWorm } from '../worms/app-worm.js';
+import { AIAgentWorm } from '../worms/ai-agent-worm.js';
+import { HotkeyManager } from '../hotkeys/index.js';
 
 import { deployCommand } from './commands/deploy.js';
 import { killCommand } from './commands/kill.js';
@@ -22,7 +24,7 @@ const program = new Command();
 
 program
   .name('sworm')
-  .version('0.1.0')
+  .version('0.2.0')
   .description('Spatially-aware desktop orchestration — deploy AI agents and apps across multi-monitor setups');
 
 // Lazy-init platform and swarm so they're only created when a command needs them
@@ -45,10 +47,48 @@ function getSwarm(): Swarm {
     registry.register('claude', ClaudeWorm);
     registry.register('ide', IDEWorm);
     registry.register('app', AppWorm);
+    registry.register('ai-agent', AIAgentWorm);
 
     _swarm = new Swarm(platform, registry);
   }
   return _swarm;
+}
+
+// Initialize hotkey manager for persistent commands
+let _hotkeyManager: HotkeyManager | null = null;
+
+function initHotkeys(): void {
+  if (_hotkeyManager) return;
+  _hotkeyManager = new HotkeyManager();
+  const swarm = getSwarm();
+
+  _hotkeyManager.onAction(async (action, args) => {
+    try {
+      switch (action) {
+        case 'toggle-visibility':
+          await swarm.toggleVisibility();
+          break;
+        case 'focus-worm': {
+          const num = (args?.number as number) ?? 0;
+          if (num > 0) await swarm.focusByNumber(num);
+          break;
+        }
+        case 'toggle-fullscreen':
+          // TODO: track focused worm for fullscreen toggle
+          break;
+        case 'kill-all':
+          await swarm.kill();
+          break;
+        case 'deploy-default':
+          await swarm.deploy('pilot');
+          break;
+      }
+    } catch {
+      // Silently ignore hotkey errors
+    }
+  });
+
+  _hotkeyManager.start();
 }
 
 // Register all commands

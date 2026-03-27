@@ -67,7 +67,47 @@ export function voiceCommand(
             break;
 
           case 'focus':
-            printInfo(`Focus command for "${command.target}" is not yet implemented.`);
+            if (command.target) {
+              swarm.kill(command.target).catch(() => {});
+            }
+            break;
+
+          case 'focus-number': {
+            const num = parseInt(command.target ?? '0', 10);
+            if (num > 0) {
+              swarm.focusByNumber(num).then(
+                () => printSuccess(`Focused agent #${num}`),
+                (err) => printError(`Focus failed: ${err instanceof Error ? err.message : String(err)}`),
+              );
+            }
+            break;
+          }
+
+          case 'expand':
+          case 'fullscreen': {
+            const n = parseInt(command.target ?? '0', 10);
+            const wormId = n > 0 ? swarm.getByNumber(n) : command.target;
+            if (wormId) {
+              swarm.fullscreenWorm(wormId).then(
+                () => printSuccess(`Fullscreen: ${wormId}`),
+                (err) => printError(`Expand failed: ${err instanceof Error ? err.message : String(err)}`),
+              );
+            }
+            break;
+          }
+
+          case 'toggle-visibility':
+            swarm.toggleVisibility().then(
+              () => printSuccess('Toggled visibility'),
+              (err) => printError(`Toggle failed: ${err instanceof Error ? err.message : String(err)}`),
+            );
+            break;
+
+          case 'minimize-all':
+            swarm.sendAllToBack().then(
+              () => printSuccess('All worms sent to back'),
+              (err) => printError(`Failed: ${err instanceof Error ? err.message : String(err)}`),
+            );
             break;
         }
       });
