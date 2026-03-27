@@ -51,7 +51,9 @@ export class Swarm {
 
     const results = await Promise.allSettled(
       config.worms.map(async (wormConfig) => {
-        const monitor = resolveMonitor(wormConfig.monitor, monitors);
+        // Resolve monitor alias through formation's monitors mapping
+        const monitorRef = config.monitors?.[wormConfig.monitor] ?? wormConfig.monitor;
+        const monitor = resolveMonitor(monitorRef, monitors);
         const rect = resolvePosition(
           wormConfig.position,
           monitor,

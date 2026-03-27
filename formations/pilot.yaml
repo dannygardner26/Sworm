@@ -1,17 +1,14 @@
 # Pilot Formation — Primary development layout
-# Claude Code on the left, IDE on the right, browser on secondary monitor
+# Claude Code on the left, IDE on the right
+# Works on single or multi-monitor setups
 
 name: pilot
-description: "Primary dev formation — Claude + IDE + Browser"
-
-monitors:
-  main: primary
-  reference: right
+description: "Primary dev formation — Claude + IDE"
 
 worms:
   - id: claude-main
     type: claude
-    monitor: main
+    monitor: primary
     position:
       zone: left-half
     params:
@@ -20,17 +17,8 @@ worms:
 
   - id: editor
     type: ide
-    monitor: main
+    monitor: primary
     position:
       zone: right-half
     params:
       folder: "."
-
-  - id: browser
-    type: app
-    monitor: reference
-    position:
-      zone: full
-    params:
-      app: chrome
-      url: http://localhost:3000

@@ -1,17 +1,11 @@
 # Review Formation — Code review layout
-# Two Claude Code instances for comparison, IDE for reference, browser for PR
-
 name: review
-description: "Code review formation — PR browser + dual Claude + IDE"
-
-monitors:
-  main: primary
-  reference: right
+description: "Code review — PR browser + IDE + Claude"
 
 worms:
   - id: pr-browser
     type: app
-    monitor: main
+    monitor: primary
     position:
       zone: left-half
     params:
@@ -20,18 +14,17 @@ worms:
 
   - id: editor
     type: ide
-    monitor: main
+    monitor: primary
     position:
-      zone: right-half
+      zone: top-right
     params:
       folder: "."
 
   - id: claude-review
     type: claude
-    monitor: reference
+    monitor: primary
     position:
-      zone: full
+      zone: bottom-right
     params:
       repo: "."
       shell: wt
-      initialPrompt: "Review the latest PR changes"
