@@ -42,7 +42,7 @@ export const WormConfigSchema = z.object({
   type: z.enum(['claude', 'ide', 'generic', 'app']),
   monitor: z.string().default('primary'),
   position: PositionSchema,
-  params: z.record(z.unknown()).default({}),
+  params: z.record(z.string(), z.unknown()).default({}),
 });
 export type WormConfig = z.infer<typeof WormConfigSchema>;
 
@@ -55,7 +55,7 @@ export const GridConfigSchema = z.object({
 export const FormationConfigSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  monitors: z.record(z.string()).optional(),
+  monitors: z.record(z.string(), z.string()).optional(),
   grid: GridConfigSchema.optional(),
   worms: z.array(WormConfigSchema).min(1),
   hooks: z.object({
