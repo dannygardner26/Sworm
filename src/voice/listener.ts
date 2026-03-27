@@ -1,10 +1,12 @@
 import { type VoiceCommand, parseVoiceCommand } from './commands.js';
 import { DictationBridge } from './dictation-bridge.js';
+import { WhisperListener } from './whisper-listener.js';
 
 export interface VoiceListenerOptions {
   wakeWord?: string;
-  engine?: 'vosk' | 'windows' | 'bridge';
+  engine?: 'vosk' | 'windows' | 'bridge' | 'whisper';
   modelPath?: string;
+  whisperPath?: string;
   sampleRate?: number;
   bridgePort?: number;
 }
@@ -94,6 +96,13 @@ export function createVoiceListener(options: VoiceListenerOptions = {}): VoiceLi
     case 'windows':
       console.warn('Windows engine is not yet implemented. Using StubListener.');
       return new StubListener();
+    case 'whisper':
+      return new WhisperListener({
+        modelPath: options.modelPath ?? '',
+        whisperPath: options.whisperPath as string | undefined,
+        wakeWord: options.wakeWord,
+        sampleRate: options.sampleRate,
+      });
     default:
       return new BridgeListener(options.bridgePort);
   }
