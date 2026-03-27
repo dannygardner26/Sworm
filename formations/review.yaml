@@ -1,0 +1,37 @@
+# Review Formation — Code review layout
+# Two Claude Code instances for comparison, IDE for reference, browser for PR
+
+name: review
+description: "Code review formation — PR browser + dual Claude + IDE"
+
+monitors:
+  main: primary
+  reference: right
+
+worms:
+  - id: pr-browser
+    type: app
+    monitor: main
+    position:
+      zone: left-half
+    params:
+      app: chrome
+      url: https://github.com
+
+  - id: editor
+    type: ide
+    monitor: main
+    position:
+      zone: right-half
+    params:
+      folder: "."
+
+  - id: claude-review
+    type: claude
+    monitor: reference
+    position:
+      zone: full
+    params:
+      repo: "."
+      shell: wt
+      initialPrompt: "Review the latest PR changes"

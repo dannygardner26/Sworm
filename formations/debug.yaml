@@ -1,0 +1,46 @@
+# Debug Formation — Focused debugging layout
+# Claude Code for AI assistance, IDE with debugger, browser DevTools, logs terminal
+
+name: debug
+description: "Debug formation — Claude + IDE + Browser DevTools + Logs"
+
+monitors:
+  main: primary
+  reference: right
+
+worms:
+  - id: claude-debug
+    type: claude
+    monitor: main
+    position:
+      zone: bottom-left
+    params:
+      repo: "."
+      shell: wt
+      initialPrompt: "Help me debug the current issue"
+
+  - id: editor
+    type: ide
+    monitor: main
+    position:
+      zone: top-half
+    params:
+      folder: "."
+
+  - id: browser
+    type: app
+    monitor: reference
+    position:
+      zone: left-half
+    params:
+      app: chrome
+      url: http://localhost:3000
+
+  - id: logs
+    type: generic
+    monitor: reference
+    position:
+      zone: right-half
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Logs"]
