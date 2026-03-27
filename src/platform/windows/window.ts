@@ -32,6 +32,12 @@ const SWP_NOZORDER = 0x0004;
 const SWP_SHOWWINDOW = 0x0040;
 const SWP_NOMOVE = 0x0002;
 const HWND_TOP = 0;
+const HWND_BOTTOM = 1;
+const HWND_TOPMOST = -1;
+const HWND_NOTOPMOST = -2;
+const SWP_NOSIZE = 0x0001;
+const SWP_NOACTIVATE = 0x0010;
+const GWL_EXSTYLE = -20;
 const DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
 // ---------------------------------------------------------------------------
@@ -49,6 +55,10 @@ const GetWindowTextLengthW = user32.func('int GetWindowTextLengthW(long hwnd)');
 const GetWindowTextW = user32.func('int GetWindowTextW(long hwnd, _Out_ uint16 *lpString, int nMaxCount)');
 const GetWindowThreadProcessId = user32.func('uint GetWindowThreadProcessId(long hwnd, _Out_ uint *lpdwProcessId)');
 const GetWindowRect = user32.func('bool GetWindowRect(long hwnd, _Out_ WRECT *lpRect)');
+
+const SetWindowTextW = user32.func('bool SetWindowTextW(long hwnd, str16 lpString)');
+const GetWindowLongW = user32.func('long GetWindowLongW(long hwnd, int nIndex)');
+const SetWindowLongW = user32.func('long SetWindowLongW(long hwnd, int nIndex, long dwNewLong)');
 
 const EnumWindowsProc = koffi.proto('bool EnumWindowsProc(long hwnd, long lParam)');
 const EnumWindows = user32.func('bool EnumWindows(EnumWindowsProc *cb, long lParam)');
@@ -174,4 +184,32 @@ export async function getRect(hwnd: number): Promise<Rect> {
 
 export async function getTitle(hwnd: number): Promise<string> {
   return getWindowTitle(hwnd);
+}
+
+export async function sendToBack(hwnd: number): Promise<void> {
+  SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+export async function setZOrder(hwnd: number, position: 'top' | 'bottom' | 'topmost' | 'notopmost'): Promise<void> {
+  const map: Record<string, number> = {
+    top: HWND_TOP,
+    bottom: HWND_BOTTOM,
+    topmost: HWND_TOPMOST,
+    notopmost: HWND_NOTOPMOST,
+  };
+  const hWndInsertAfter = map[position];
+  SetWindowPos(hwnd, hWndInsertAfter, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+export async function setExStyle(hwnd: number, addFlags: number, removeFlags?: number): Promise<void> {
+  let style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+  style |= addFlags;
+  if (removeFlags !== undefined) {
+    style &= ~removeFlags;
+  }
+  SetWindowLongW(hwnd, GWL_EXSTYLE, style);
+}
+
+export async function setTitle(hwnd: number, title: string): Promise<void> {
+  SetWindowTextW(hwnd, title);
 }

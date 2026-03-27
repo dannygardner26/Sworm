@@ -24,6 +24,7 @@ export function printStatus(worms: WormStatusInfo[]): void {
 
   const table = new Table({
     head: [
+      chalk.white('#'),
       chalk.white('ID'),
       chalk.white('Type'),
       chalk.white('Status'),
@@ -41,6 +42,7 @@ export function printStatus(worms: WormStatusInfo[]): void {
           : chalk.yellow;
 
     table.push([
+      w.number !== undefined ? String(w.number) : chalk.dim('-'),
       w.id,
       w.type,
       statusColor(w.status),

@@ -53,6 +53,10 @@ export interface PlatformAPI {
     findByProcess(pid: number): Promise<number[]>;
     getRect(hwnd: number): Promise<Rect>;
     getTitle(hwnd: number): Promise<string>;
+    sendToBack(hwnd: number): Promise<void>;
+    setZOrder(hwnd: number, position: 'top' | 'bottom' | 'topmost' | 'notopmost'): Promise<void>;
+    setExStyle(hwnd: number, addFlags: number, removeFlags?: number): Promise<void>;
+    setTitle(hwnd: number, title: string): Promise<void>;
   };
   processes: {
     spawn(command: string, args: string[], opts?: SpawnOpts): Promise<SpawnedProcess>;

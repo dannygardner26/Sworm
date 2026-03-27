@@ -8,6 +8,7 @@ export interface WormStatusInfo {
   type: string;
   status: WormStatus;
   hwnd: number | null;
+  number?: number;
 }
 
 export abstract class Worm {
@@ -17,6 +18,7 @@ export abstract class Worm {
   public config: WormConfig;
   public hwnd: number | null = null;
   public status: WormStatus = 'created';
+  public wormNumber: number | undefined;
   protected platform: PlatformAPI;
 
   constructor(id: string, config: WormConfig, platform: PlatformAPI) {
@@ -44,6 +46,13 @@ export abstract class Worm {
     await this.platform.windows.focus(this.hwnd);
   }
 
+  async sendToBack(): Promise<void> {
+    if (this.hwnd === null) {
+      throw new Error(`Worm ${this.id} has no window handle`);
+    }
+    await this.platform.windows.sendToBack(this.hwnd);
+  }
+
   async kill(): Promise<void> {
     if (this.hwnd !== null) {
       await this.platform.windows.close(this.hwnd);
@@ -57,6 +66,7 @@ export abstract class Worm {
       type: this.type,
       status: this.status,
       hwnd: this.hwnd,
+      number: this.wormNumber,
     };
   }
 

@@ -25,6 +25,10 @@ export function createPlatform(): PlatformAPI {
       findByProcess: window.findByProcess,
       getRect: window.getRect,
       getTitle: window.getTitle,
+      sendToBack: window.sendToBack,
+      setZOrder: window.setZOrder,
+      setExStyle: window.setExStyle,
+      setTitle: window.setTitle,
     },
     processes: {
       spawn: proc.spawn,

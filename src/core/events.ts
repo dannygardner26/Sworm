@@ -11,6 +11,8 @@ export type SwormEventMap = {
   'worm:died': [wormId: string, reason: string];
   'monitor:changed': [monitors: MonitorInfo[]];
   'voice:command': [raw: string, parsed: unknown];
+  'hotkey:pressed': [action: string, args?: Record<string, unknown>];
+  'worm:visibility': [visible: boolean];
 };
 
 type EventName = keyof SwormEventMap;

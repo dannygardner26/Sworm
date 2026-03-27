@@ -3,6 +3,7 @@ import type { Worm, WormStatusInfo } from './worm.js';
 import { WormTypeRegistry } from './registry.js';
 import { SwormEventBus } from './events.js';
 import { FormationLoader, resolveMonitor, resolvePosition } from './formation.js';
+import { WormNumbering } from './numbering.js';
 
 export class Swarm {
   private platform: PlatformAPI;
@@ -11,6 +12,8 @@ export class Swarm {
   private activeWorms = new Map<string, Worm>();
   private formationLoader: FormationLoader;
   private activeFormation: string | null = null;
+  private numbering = new WormNumbering();
+  private visible = true;
 
   constructor(
     platform: PlatformAPI,
@@ -67,6 +70,10 @@ export class Swarm {
         this.eventBus.emit('worm:positioned', worm.id);
 
         this.activeWorms.set(worm.id, worm);
+
+        const num = this.numbering.assign(worm.id);
+        worm.wormNumber = num;
+        await this.platform.windows.setTitle(worm.hwnd!, `[${num}] ${worm.id}`);
       }),
     );
 
@@ -98,6 +105,7 @@ export class Swarm {
       });
       await Promise.allSettled(killPromises);
       this.activeWorms.clear();
+      this.numbering.reset();
       this.activeFormation = null;
       return;
     }
@@ -114,6 +122,7 @@ export class Swarm {
       await worm.kill();
       this.eventBus.emit('worm:died', worm.id, 'killed');
       this.activeWorms.delete(target);
+      this.numbering.remove(target);
       return;
     }
 
@@ -126,5 +135,51 @@ export class Swarm {
 
   getEventBus(): SwormEventBus {
     return this.eventBus;
+  }
+
+  async focusByNumber(n: number): Promise<void> {
+    const wormId = this.numbering.getByNumber(n);
+    if (!wormId) throw new Error(`No worm with number ${n}`);
+    const worm = this.activeWorms.get(wormId);
+    if (!worm) throw new Error(`Worm ${wormId} not found`);
+    await worm.focus();
+  }
+
+  getByNumber(n: number): string | undefined {
+    return this.numbering.getByNumber(n);
+  }
+
+  async toggleVisibility(): Promise<void> {
+    if (this.visible) {
+      await this.sendAllToBack();
+    } else {
+      await this.bringAllToFront();
+    }
+    this.visible = !this.visible;
+  }
+
+  async sendAllToBack(): Promise<void> {
+    for (const worm of this.activeWorms.values()) {
+      if (worm.hwnd) await worm.sendToBack();
+    }
+  }
+
+  async bringAllToFront(): Promise<void> {
+    for (const worm of this.activeWorms.values()) {
+      if (worm.hwnd) await worm.focus();
+    }
+  }
+
+  async expandWorm(wormId: string): Promise<void> {
+    const worm = this.activeWorms.get(wormId);
+    if (!worm?.hwnd) throw new Error(`Worm ${wormId} not found or has no window`);
+    const monitors = await this.platform.monitors.getAll();
+    const monitor = resolveMonitor(worm.config.monitor, monitors);
+    // Expand to full monitor
+    await worm.position(monitor.workArea);
+  }
+
+  async fullscreenWorm(wormId: string): Promise<void> {
+    await this.expandWorm(wormId);
   }
 }
