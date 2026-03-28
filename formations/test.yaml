@@ -10,7 +10,7 @@ worms:
       zone: left-half
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Left"]
+      args: []
 
   - id: term-right
     type: generic
@@ -19,4 +19,4 @@ worms:
       zone: right-half
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Right"]
+      args: []

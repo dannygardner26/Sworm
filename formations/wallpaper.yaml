@@ -1,6 +1,6 @@
+# Wallpaper Formation — 4 terminals covering the screen in quadrants
 name: wallpaper
-description: "Full-screen AI wallpaper — 4 agents per monitor in quadrants"
-mode: normal
+description: "Full-screen terminal wallpaper — 4 agents per monitor"
 
 worms:
   - id: agent-1
@@ -8,37 +8,33 @@ worms:
     monitor: primary
     position:
       zone: top-left
-    wallpaper: true
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Agent 1"]
+      args: []
 
   - id: agent-2
     type: generic
     monitor: primary
     position:
       zone: top-right
-    wallpaper: true
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Agent 2"]
+      args: []
 
   - id: agent-3
     type: generic
     monitor: primary
     position:
       zone: bottom-left
-    wallpaper: true
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Agent 3"]
+      args: []
 
   - id: agent-4
     type: generic
     monitor: primary
     position:
       zone: bottom-right
-    wallpaper: true
     params:
       executable: wt.exe
-      args: ["-w", "new", "--title", "Agent 4"]
+      args: []
