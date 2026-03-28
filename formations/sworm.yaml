@@ -1,0 +1,23 @@
+# Sworm Formation — 2 Claude Code agents, split screen
+# Each agent is autonomous but shares the same repo context
+name: sworm
+description: "Two Claude Code agents — left builds, right tests"
+
+worms:
+  - id: builder
+    type: claude
+    monitor: primary
+    position:
+      zone: left-half
+    params:
+      repo: "."
+      shell: wt
+
+  - id: reviewer
+    type: claude
+    monitor: primary
+    position:
+      zone: right-half
+    params:
+      repo: "."
+      shell: wt

@@ -58,7 +58,7 @@ export class ClaudeWorm extends Worm {
     switch (shell) {
       case 'wt':
         command = 'wt.exe';
-        args = ['-w', 'new', '-d', workingDir, '--', ...claudeCmd.split(' ')];
+        args = ['-d', workingDir, '--', ...claudeCmd.split(' ')];
         break;
       case 'cmd':
         command = 'cmd.exe';
