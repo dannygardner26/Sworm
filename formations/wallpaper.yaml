@@ -1,6 +1,6 @@
 name: wallpaper
 description: "Full-screen AI wallpaper — 4 agents per monitor in quadrants"
-mode: wallpaper
+mode: normal
 
 worms:
   - id: agent-1

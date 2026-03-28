@@ -1,0 +1,22 @@
+# Test Formation — 2 terminal windows split screen
+name: test
+description: "Simple test — two terminals side by side"
+
+worms:
+  - id: term-left
+    type: generic
+    monitor: primary
+    position:
+      zone: left-half
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Left"]
+
+  - id: term-right
+    type: generic
+    monitor: primary
+    position:
+      zone: right-half
+    params:
+      executable: wt.exe
+      args: ["-w", "new", "--title", "Right"]

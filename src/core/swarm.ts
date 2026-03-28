@@ -49,9 +49,10 @@ export class Swarm {
 
     const monitors = await this.platform.monitors.getAll();
 
-    const results = await Promise.allSettled(
-      config.worms.map(async (wormConfig) => {
-        // Resolve monitor alias through formation's monitors mapping
+    // Deploy worms sequentially so each can accurately detect its new window
+    let failureCount = 0;
+    for (const wormConfig of config.worms) {
+      try {
         const monitorRef = config.monitors?.[wormConfig.monitor] ?? wormConfig.monitor;
         const monitor = resolveMonitor(monitorRef, monitors);
         const rect = resolvePosition(
@@ -76,34 +77,43 @@ export class Swarm {
         const num = this.numbering.assign(worm.id);
         worm.wormNumber = num;
         await this.platform.windows.setTitle(worm.hwnd!, `[${num}] ${worm.id}`);
-      }),
-    );
+      } catch (err) {
+        failureCount++;
+        const msg = err instanceof Error ? err.message : String(err);
+        this.eventBus.emit('worm:died', wormConfig.id, msg);
+      }
+    }
 
-    const failures = results.filter(
-      (r): r is PromiseRejectedResult => r.status === 'rejected',
-    );
-
-    if (failures.length > 0) {
+    if (failureCount > 0) {
       const error = new Error(
-        `${failures.length}/${config.worms.length} worms failed to deploy`,
+        `${failureCount}/${config.worms.length} worms failed to deploy`,
       );
       this.eventBus.emit('formation:failed', formationName, error);
-      // If all failed, throw
-      if (failures.length === config.worms.length) {
+      if (failureCount === config.worms.length) {
         throw error;
       }
     }
 
     this.activeFormation = formationName;
 
-    // Apply wallpaper mode if configured
+    // Apply wallpaper mode if configured (best-effort, won't crash if WorkerW unavailable)
     if (config.mode === 'wallpaper') {
-      const { parentToDesktop, setWallpaperStyle } = await import('../platform/windows/wallpaper.js');
-      for (const worm of this.activeWorms.values()) {
-        if (worm.hwnd) {
-          setWallpaperStyle(worm.hwnd);
-          parentToDesktop(worm.hwnd);
+      try {
+        const { parentToDesktop, setWallpaperStyle } = await import('../platform/windows/wallpaper.js');
+        for (const worm of this.activeWorms.values()) {
+          if (worm.hwnd) {
+            try {
+              setWallpaperStyle(worm.hwnd);
+              parentToDesktop(worm.hwnd);
+            } catch {
+              // Wallpaper parenting failed for this worm, continue with normal z-order
+              await worm.sendToBack();
+            }
+          }
         }
+      } catch {
+        // Wallpaper mode unavailable, fall back to sending all to back
+        await this.sendAllToBack();
       }
     }
 

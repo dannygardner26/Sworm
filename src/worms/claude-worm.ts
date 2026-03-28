@@ -16,6 +16,7 @@ export class ClaudeWorm extends Worm {
   readonly type = 'claude';
   private pid: number | null = null;
   private cwd: string = '';
+  private windowsBefore: Set<number> = new Set();
 
   constructor(id: string, config: WormConfig, platform: PlatformAPI) {
     super(id, config, platform);
@@ -23,6 +24,10 @@ export class ClaudeWorm extends Worm {
 
   async spawn(): Promise<void> {
     this.status = 'spawning';
+
+    // Snapshot windows before spawn
+    const before = await this.platform.windows.findByTitle(/./);
+    this.windowsBefore = new Set(before);
 
     const params = this.config.params as unknown as ClaudeWormParams;
     if (!params.repo) {
@@ -74,14 +79,20 @@ export class ClaudeWorm extends Worm {
   }
 
   async findWindow(): Promise<number> {
+    // Find new windows that appeared after spawn
+    const current = await this.platform.windows.findByTitle(/./);
+    const newWindows = current.filter(h => !this.windowsBefore.has(h));
+
+    if (newWindows.length > 0) {
+      return newWindows[0];
+    }
+
+    // Fallback: try title matching
     const dirName = path.basename(this.cwd);
     const pattern = new RegExp(`(${dirName}|claude)`, 'i');
     const hwnds = await this.platform.windows.findByTitle(pattern);
+    if (hwnds.length > 0) return hwnds[0];
 
-    if (hwnds.length === 0) {
-      throw new Error(`ClaudeWorm ${this.id}: no windows found matching "${pattern.source}"`);
-    }
-
-    return hwnds[0];
+    throw new Error(`ClaudeWorm ${this.id}: no new windows found`);
   }
 }
