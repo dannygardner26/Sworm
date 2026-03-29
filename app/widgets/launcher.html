@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a; color: #e0e0e0;
+  font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
+  padding: 16px; height: 100vh;
+  display: flex; flex-direction: column; gap: 12px;
+}
+h2 { font-size: 14px; color: #4fc3f7; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px; flex: 1;
+}
+.btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 16px 8px;
+  background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+  color: #e0e0e0; cursor: pointer; transition: all 0.15s;
+  font-family: inherit; font-size: 12px;
+}
+.btn:hover { background: #1e3a5f; border-color: #4fc3f7; color: #4fc3f7; }
+.btn .icon { font-size: 24px; }
+.section { margin-top: 8px; }
+.section-title { font-size: 11px; color: #555; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+  <h2>Quick Launch</h2>
+
+  <div class="section">
+    <div class="section-title">Apps</div>
+    <div class="grid">
+      <button class="btn" onclick="launch('discord')"><span class="icon">💬</span>Discord</button>
+      <button class="btn" onclick="launch('spotify')"><span class="icon">🎵</span>Spotify</button>
+      <button class="btn" onclick="launch('chrome')"><span class="icon">🌐</span>Chrome</button>
+      <button class="btn" onclick="launch('code')"><span class="icon">📝</span>VS Code</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Sworm</div>
+    <div class="grid">
+      <button class="btn" onclick="swormCmd('new agent')"><span class="icon">></span>New Agent</button>
+      <button class="btn" onclick="swormCmd('new shell')"><span class="icon">$</span>New Shell</button>
+      <button class="btn" onclick="swormCmd('kill all')"><span class="icon">✕</span>Kill All</button>
+    </div>
+  </div>
+
+<script>
+const APP_PATHS = {
+  discord: 'C:\\Users\\danny\\AppData\\Local\\Discord\\Update.exe',
+  spotify: 'C:\\Users\\danny\\AppData\\Roaming\\Spotify\\Spotify.exe',
+  chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  code: 'C:\\Users\\danny\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe',
+};
+
+function launch(app) {
+  const exe = APP_PATHS[app] || app;
+  window.parent.postMessage({ type: 'launch', app: exe, args: app === 'discord' ? ['--processStart', 'Discord.exe'] : [] }, '*');
+}
+
+function swormCmd(cmd) {
+  window.parent.postMessage({ type: 'sworm-command', cmd }, '*');
+}
+</script>
+</body>
+</html>

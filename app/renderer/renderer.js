@@ -1,54 +1,84 @@
-// Access the Sworm API exposed by preload
-const sworm = window.sworm;
+// ═══════════════════════════════════════════════════════════
+// SWORM RENDERER — Terminal + Widget Pane System
+// ═══════════════════════════════════════════════════════════
 
-// ─── State ────────────────────────────────────────────
+// Resolve xterm globals (UMD export variations)
+const XTerminal = (typeof Terminal !== 'undefined' && Terminal.Terminal) ? Terminal.Terminal : (typeof Terminal !== 'undefined' ? Terminal : null);
+const XFitAddon = (typeof FitAddon !== 'undefined' && FitAddon.FitAddon) ? FitAddon.FitAddon : (typeof FitAddon !== 'undefined' ? FitAddon : null);
+
+console.log('[Sworm] API:', window.sworm ? 'OK' : 'MISSING');
+console.log('[Sworm] XTerminal:', XTerminal ? 'OK' : 'MISSING');
+console.log('[Sworm] XFitAddon:', XFitAddon ? 'OK' : 'MISSING');
+
+// ─── State ────────────────────────────────────────────────
 const state = {
-  panes: new Map(), // id -> { terminal, fitAddon, number, name, cmd, active, element }
+  panes: new Map(),
   focusedPane: null,
   paneCounter: 0,
   commandPaletteOpen: false,
-  selectedResultIndex: 0,
 };
 
-// ─── Pane Management ──────────────────────────────────
+// ─── Welcome Screen ──────────────────────────────────────
+function showWelcome() {
+  const container = document.getElementById('pane-container');
+  container.innerHTML = `
+    <div id="welcome">
+      <h1>SWORM</h1>
+      <div class="subtitle">terminal + widget pane system</div>
+      <div class="actions">
+        <button class="action-btn" onclick="createPane({name:'main',cmd:'claude'})">
+          <span class="icon">></span> New Agent
+        </button>
+        <button class="action-btn" onclick="createPane({name:'shell',cmd:''})">
+          <span class="icon">$</span> Shell
+        </button>
+        <button class="action-btn" onclick="createWidgetPane({name:'launcher',widget:'launcher'})">
+          <span class="icon">+</span> Launcher
+        </button>
+        <button class="action-btn" onclick="createWidgetPane({name:'dashboard',widget:'dashboard'})">
+          <span class="icon">#</span> Dashboard
+        </button>
+      </div>
+      <div class="hint">Ctrl+Space for command palette | Ctrl+N new agent</div>
+    </div>
+  `;
+}
 
+// ─── Terminal Pane ────────────────────────────────────────
 async function createPane(opts = {}) {
+  clearWelcome();
   const number = ++state.paneCounter;
   const id = opts.id || `agent-${number}`;
   const name = opts.name || id;
-  const cmd = opts.cmd || 'claude'; // Default to Claude Code!
+  const cmd = opts.cmd !== undefined ? opts.cmd : 'claude';
   const cwd = opts.cwd || undefined;
 
-  // Create PTY in main process
-  const result = await sworm.pty.create({ id, cmd, cwd });
+  console.log(`[Sworm] Creating terminal pane: [${number}] ${name} cmd="${cmd}"`);
 
-  // Create DOM elements
+  // Create PTY
+  const result = await window.sworm.pty.create({ id, cmd: cmd || undefined, cwd });
+  console.log(`[Sworm] PTY pid=${result.pid}`);
+
+  // Build DOM
   const container = document.getElementById('pane-container');
-
   const paneEl = document.createElement('div');
   paneEl.className = 'pane';
-  paneEl.id = `pane-${id}`;
   paneEl.dataset.paneId = id;
 
-  // Label bar
   const label = document.createElement('div');
   label.className = 'pane-label';
   label.innerHTML = `
     <span><span class="pane-number">[${number}]</span> ${name}</span>
-    <span style="display:flex;align-items:center;gap:4px">
+    <span style="display:flex;align-items:center;gap:6px">
       <span class="pane-status active"></span>
       <span class="close-btn" data-pane-id="${id}">&times;</span>
     </span>
   `;
   label.addEventListener('click', (e) => {
-    if (e.target.classList.contains('close-btn')) {
-      killPane(e.target.dataset.paneId);
-    } else {
-      focusPane(id);
-    }
+    if (e.target.classList.contains('close-btn')) killPane(e.target.dataset.paneId);
+    else focusPane(id);
   });
 
-  // Terminal container
   const termEl = document.createElement('div');
   termEl.className = 'pane-terminal';
 
@@ -56,348 +86,341 @@ async function createPane(opts = {}) {
   paneEl.appendChild(termEl);
   container.appendChild(paneEl);
 
-  // Create xterm.js instance
-  const terminal = new Terminal({
+  // Create xterm
+  const terminal = new XTerminal({
     theme: {
-      background: '#0a0a0a',
-      foreground: '#e0e0e0',
-      cursor: '#4fc3f7',
+      background: '#0a0a0a', foreground: '#e0e0e0', cursor: '#4fc3f7',
       selectionBackground: '#264f78',
-      black: '#0a0a0a',
-      red: '#f44336',
-      green: '#4caf50',
-      yellow: '#ffeb3b',
-      blue: '#4fc3f7',
-      magenta: '#ce93d8',
-      cyan: '#80deea',
-      white: '#e0e0e0',
+      black: '#0a0a0a', red: '#f44336', green: '#4caf50', yellow: '#ffeb3b',
+      blue: '#4fc3f7', magenta: '#ce93d8', cyan: '#80deea', white: '#e0e0e0',
     },
     fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace",
-    fontSize: 14,
-    cursorBlink: true,
-    cursorStyle: 'bar',
-    allowTransparency: true,
+    fontSize: 14, cursorBlink: true, cursorStyle: 'bar', allowTransparency: true,
   });
 
-  const fitAddon = new FitAddon.FitAddon();
+  const fitAddon = new XFitAddon();
   terminal.loadAddon(fitAddon);
-
   terminal.open(termEl);
-  fitAddon.fit();
 
-  // Connect terminal input to PTY
-  terminal.onData((data) => {
-    sworm.pty.write(id, data);
-  });
+  // Connect input to PTY
+  terminal.onData((data) => window.sworm.pty.write(id, data));
 
-  // Store pane state
+  // Store state
   state.panes.set(id, {
-    terminal,
-    fitAddon,
-    number,
-    name,
-    cmd,
-    element: paneEl,
-    active: true,
+    terminal, fitAddon, number, name, type: 'terminal',
+    element: paneEl, active: true,
   });
 
+  // Layout first, then fit terminal after a frame
+  updateLayout();
+  focusPane(id);
+
+  // Delayed fit — must happen after layout is computed
+  await new Promise(r => setTimeout(r, 50));
+  try {
+    fitAddon.fit();
+    const dims = fitAddon.proposeDimensions();
+    if (dims) window.sworm.pty.resize(id, dims.cols, dims.rows);
+  } catch (e) {
+    console.warn('[Sworm] fit error:', e);
+  }
+
+  updateStatusBar();
+  return id;
+}
+
+// ─── Widget Pane ──────────────────────────────────────────
+function createWidgetPane(opts = {}) {
+  clearWelcome();
+  const number = ++state.paneCounter;
+  const id = opts.id || `widget-${number}`;
+  const name = opts.name || id;
+  const widget = opts.widget || 'launcher';
+
+  console.log(`[Sworm] Creating widget pane: [${number}] ${name} widget=${widget}`);
+
+  const container = document.getElementById('pane-container');
+  const paneEl = document.createElement('div');
+  paneEl.className = 'pane';
+  paneEl.dataset.paneId = id;
+
+  const label = document.createElement('div');
+  label.className = 'pane-label';
+  label.innerHTML = `
+    <span><span class="pane-number">[${number}]</span> ${name}</span>
+    <span style="display:flex;align-items:center;gap:6px">
+      <span class="pane-status widget"></span>
+      <span class="close-btn" data-pane-id="${id}">&times;</span>
+    </span>
+  `;
+  label.addEventListener('click', (e) => {
+    if (e.target.classList.contains('close-btn')) killPane(e.target.dataset.paneId);
+    else focusPane(id);
+  });
+
+  const iframe = document.createElement('iframe');
+  iframe.className = 'pane-widget';
+  // Load widget from app/widgets/ directory
+  const widgetDir = document.location.href.replace(/renderer\/index\.html.*$/, 'widgets/');
+  iframe.src = widgetDir + widget + '.html';
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+
+  paneEl.appendChild(label);
+  paneEl.appendChild(iframe);
+  container.appendChild(paneEl);
+
+  state.panes.set(id, {
+    number, name, type: 'widget', widget,
+    element: paneEl, active: true, iframe,
+  });
+
+  updateLayout();
   focusPane(id);
   updateStatusBar();
-  updateLayout();
-
   return id;
+}
+
+// ─── Pane Management ──────────────────────────────────────
+function clearWelcome() {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
 }
 
 function killPane(id) {
   const pane = state.panes.get(id);
   if (!pane) return;
-
-  pane.terminal.dispose();
+  if (pane.type === 'terminal') {
+    pane.terminal.dispose();
+    window.sworm.pty.kill(id);
+  }
   pane.element.remove();
   state.panes.delete(id);
-  sworm.pty.kill(id);
 
-  // Focus another pane
   if (state.focusedPane === id) {
     const remaining = [...state.panes.keys()];
-    if (remaining.length > 0) {
-      focusPane(remaining[remaining.length - 1]);
-    } else {
-      state.focusedPane = null;
-    }
+    if (remaining.length > 0) focusPane(remaining[remaining.length - 1]);
+    else { state.focusedPane = null; showWelcome(); }
   }
-
-  updateStatusBar();
   updateLayout();
+  updateStatusBar();
 }
 
 function focusPane(id) {
-  // Unfocus all
-  for (const [paneId, pane] of state.panes) {
-    pane.element.classList.toggle('focused', paneId === id);
+  for (const [pid, pane] of state.panes) {
+    pane.element.classList.toggle('focused', pid === id);
   }
   state.focusedPane = id;
   const pane = state.panes.get(id);
-  if (pane) {
+  if (pane && pane.type === 'terminal') {
     pane.terminal.focus();
-    pane.fitAddon.fit();
+    setTimeout(() => {
+      try {
+        pane.fitAddon.fit();
+        const dims = pane.fitAddon.proposeDimensions();
+        if (dims) window.sworm.pty.resize(id, dims.cols, dims.rows);
+      } catch {}
+    }, 20);
   }
   updateStatusBar();
 }
 
 function focusByNumber(n) {
   for (const [id, pane] of state.panes) {
-    if (pane.number === n) {
-      focusPane(id);
-      return;
-    }
+    if (pane.number === n) { focusPane(id); return; }
   }
 }
 
 function updateLayout() {
   const count = state.panes.size;
+  if (count === 0) return;
   const panes = [...state.panes.values()];
 
-  if (count === 0) return;
-
-  // Auto-tiling based on pane count
   if (count === 1) {
     panes[0].element.style.width = '100%';
     panes[0].element.style.height = '100%';
   } else if (count === 2) {
-    panes.forEach(p => {
-      p.element.style.width = 'calc(50% - 1px)';
-      p.element.style.height = '100%';
-    });
+    panes.forEach(p => { p.element.style.width = 'calc(50% - 1px)'; p.element.style.height = '100%'; });
   } else if (count === 3) {
-    panes[0].element.style.width = 'calc(50% - 1px)';
-    panes[0].element.style.height = '100%';
-    panes[1].element.style.width = 'calc(50% - 1px)';
-    panes[1].element.style.height = 'calc(50% - 1px)';
-    panes[2].element.style.width = 'calc(50% - 1px)';
-    panes[2].element.style.height = 'calc(50% - 1px)';
+    panes[0].element.style.width = 'calc(50% - 1px)'; panes[0].element.style.height = '100%';
+    panes[1].element.style.width = 'calc(50% - 1px)'; panes[1].element.style.height = 'calc(50% - 1px)';
+    panes[2].element.style.width = 'calc(50% - 1px)'; panes[2].element.style.height = 'calc(50% - 1px)';
   } else {
-    // 4+ panes: equal grid
     const cols = Math.ceil(Math.sqrt(count));
-    const w = `calc(${100 / cols}% - ${(cols - 1) * 2 / cols}px)`;
+    const rows = Math.ceil(count / cols);
     panes.forEach(p => {
-      p.element.style.width = w;
-      p.element.style.height = `calc(${100 / Math.ceil(count / cols)}% - 1px)`;
+      p.element.style.width = `calc(${100/cols}% - ${(cols-1)*2/cols}px)`;
+      p.element.style.height = `calc(${100/rows}% - ${(rows-1)*2/rows}px)`;
     });
   }
 
-  // Refit all terminals after layout change
+  // Refit terminals after layout
   requestAnimationFrame(() => {
     for (const [id, pane] of state.panes) {
-      pane.fitAddon.fit();
-      const dims = pane.fitAddon.proposeDimensions();
-      if (dims) {
-        sworm.pty.resize(id, dims.cols, dims.rows);
+      if (pane.type === 'terminal') {
+        try {
+          pane.fitAddon.fit();
+          const dims = pane.fitAddon.proposeDimensions();
+          if (dims) window.sworm.pty.resize(id, dims.cols, dims.rows);
+        } catch {}
       }
     }
   });
 }
 
-// ─── PTY Data Routing ─────────────────────────────────
-
-sworm.pty.onData((id, data) => {
+// ─── PTY Data Routing ─────────────────────────────────────
+window.sworm.pty.onData((id, data) => {
   const pane = state.panes.get(id);
-  if (pane) pane.terminal.write(data);
+  if (pane && pane.type === 'terminal') pane.terminal.write(data);
 });
 
-sworm.pty.onExit((id, exitCode) => {
+window.sworm.pty.onExit((id, exitCode) => {
   const pane = state.panes.get(id);
   if (pane) {
     pane.active = false;
-    const statusEl = pane.element.querySelector('.pane-status');
-    if (statusEl) statusEl.classList.remove('active');
-    pane.terminal.write(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m\r\n`);
+    const s = pane.element.querySelector('.pane-status');
+    if (s) s.classList.remove('active');
+    if (pane.type === 'terminal') {
+      pane.terminal.write(`\r\n\x1b[90m[exited: ${exitCode}]\x1b[0m\r\n`);
+    }
   }
   updateStatusBar();
 });
 
-// ─── Status Bar ───────────────────────────────────────
+// ─── Widget Message Bridge ────────────────────────────────
+window.addEventListener('message', (e) => {
+  if (!e.data || !e.data.type) return;
+  console.log('[Sworm] Widget message:', e.data);
+  switch (e.data.type) {
+    case 'launch':
+      if (window.sworm.app) window.sworm.app.launch({ exe: e.data.app, args: e.data.args });
+      break;
+    case 'sworm-command':
+      handleCommand(e.data.cmd);
+      break;
+    case 'new-agent':
+      createPane({ name: e.data.name, cmd: e.data.cmd || 'claude' });
+      break;
+  }
+});
 
+function handleCommand(cmd) {
+  if (cmd === 'new agent') createPane();
+  else if (cmd === 'new shell') createPane({ name: 'shell', cmd: '' });
+  else if (cmd === 'new launcher') createWidgetPane({ name: 'launcher', widget: 'launcher' });
+  else if (cmd === 'kill all') { for (const id of [...state.panes.keys()]) killPane(id); }
+}
+
+// ─── Status Bar ───────────────────────────────────────────
 function updateStatusBar() {
   const bar = document.getElementById('status-bar');
-  const activeCount = [...state.panes.values()].filter(p => p.active).length;
-  const totalCount = state.panes.size;
+  const terminals = [...state.panes.values()].filter(p => p.type === 'terminal');
+  const widgets = [...state.panes.values()].filter(p => p.type === 'widget');
   const focused = state.focusedPane ? state.panes.get(state.focusedPane) : null;
 
   bar.innerHTML = `
     <div class="left">
-      <span class="agent-count">${activeCount}/${totalCount} agents</span>
-      ${focused ? `<span>focused: [${focused.number}] ${focused.name}</span>` : ''}
+      <span class="agent-count">${terminals.length} agents ${widgets.length ? `| ${widgets.length} widgets` : ''}</span>
+      ${focused ? `<span>[${focused.number}] ${focused.name}</span>` : ''}
     </div>
     <div class="right">
-      <span class="shortcut-hint">Ctrl+N new | Ctrl+Space palette | Ctrl+1-9 focus</span>
+      <span class="shortcut-hint">Ctrl+N agent | Ctrl+Space palette | Ctrl+1-9 focus</span>
     </div>
   `;
 }
 
-// ─── Command Palette ──────────────────────────────────
-
+// ─── Command Palette ──────────────────────────────────────
 const COMMANDS = [
-  { label: 'New Agent', description: 'Spawn a Claude Code pane', action: () => createPane() },
-  { label: 'New Shell', description: 'Spawn a plain terminal', action: () => createPane({ cmd: '', name: 'shell' }) },
-  { label: 'Kill All', description: 'Close all panes', action: () => { for (const id of [...state.panes.keys()]) killPane(id); } },
-  { label: 'Split Right', description: 'New agent to the right', action: () => createPane() },
+  { label: 'New Agent', desc: 'Claude Code terminal', fn: () => createPane() },
+  { label: 'New Shell', desc: 'Plain terminal', fn: () => createPane({ name: 'shell', cmd: '' }) },
+  { label: 'Launcher', desc: 'App launcher widget', fn: () => createWidgetPane({ name: 'launcher', widget: 'launcher' }) },
+  { label: 'Dashboard', desc: 'Agent dashboard widget', fn: () => createWidgetPane({ name: 'dashboard', widget: 'dashboard' }) },
+  { label: 'Kill All', desc: 'Close all panes', fn: () => { for (const id of [...state.panes.keys()]) killPane(id); } },
 ];
 
 function toggleCommandPalette() {
-  const el = document.getElementById('command-palette');
   state.commandPaletteOpen = !state.commandPaletteOpen;
+  const el = document.getElementById('command-palette');
   el.classList.toggle('hidden', !state.commandPaletteOpen);
-
   if (state.commandPaletteOpen) {
     const input = el.querySelector('input');
-    input.value = '';
-    input.focus();
-    state.selectedResultIndex = 0;
+    if (input) { input.value = ''; input.focus(); }
     renderPaletteResults('');
   }
 }
 
 function renderPaletteResults(query) {
-  const resultsEl = document.getElementById('command-palette').querySelector('.results');
+  const el = document.getElementById('command-palette');
+  const resultsEl = el.querySelector('.results');
+  if (!resultsEl) return;
   const q = query.toLowerCase();
-
-  // Build results: active panes + commands
   let html = '';
 
-  // Active panes section
-  const paneResults = [...state.panes.entries()]
-    .filter(([id, p]) => !q || p.name.toLowerCase().includes(q) || String(p.number).includes(q))
-    .map(([id, p]) => `
-      <div class="result-item" data-action="focus" data-id="${id}">
-        <span class="label">[${p.number}] ${p.name}</span>
-        <span class="description">${p.active ? 'active' : 'exited'}</span>
-      </div>
-    `).join('');
+  // Active panes
+  const paneHtml = [...state.panes.entries()]
+    .filter(([, p]) => !q || p.name.includes(q) || String(p.number).includes(q))
+    .map(([id, p]) => `<div class="result-item" data-action="focus" data-id="${id}">
+      <span class="label">[${p.number}] ${p.name}</span>
+      <span class="description">${p.type} ${p.active ? '●' : '○'}</span>
+    </div>`).join('');
+  if (paneHtml) html += `<div class="section-header">Active Panes</div>${paneHtml}`;
 
-  if (paneResults) {
-    html += `<div class="section-header">Agents</div>${paneResults}`;
-  }
-
-  // Commands section
-  const cmdResults = COMMANDS
-    .filter(c => !q || c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q))
-    .map((c, i) => `
-      <div class="result-item" data-action="command" data-index="${i}">
-        <span class="label">${c.label}</span>
-        <span class="description">${c.description}</span>
-      </div>
-    `).join('');
-
-  if (cmdResults) {
-    html += `<div class="section-header">Commands</div>${cmdResults}`;
-  }
+  // Commands
+  const cmdHtml = COMMANDS
+    .filter(c => !q || c.label.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q))
+    .map((c, i) => `<div class="result-item" data-action="cmd" data-idx="${i}">
+      <span class="label">${c.label}</span>
+      <span class="description">${c.desc}</span>
+    </div>`).join('');
+  if (cmdHtml) html += `<div class="section-header">Commands</div>${cmdHtml}`;
 
   resultsEl.innerHTML = html;
-
-  // Click handlers
   resultsEl.querySelectorAll('.result-item').forEach(item => {
     item.addEventListener('click', () => {
-      if (item.dataset.action === 'focus') {
-        focusPane(item.dataset.id);
-      } else if (item.dataset.action === 'command') {
-        COMMANDS[parseInt(item.dataset.index)].action();
-      }
+      if (item.dataset.action === 'focus') focusPane(item.dataset.id);
+      else if (item.dataset.action === 'cmd') COMMANDS[parseInt(item.dataset.idx)].fn();
       toggleCommandPalette();
     });
   });
 }
 
-// ─── Keyboard Shortcuts ───────────────────────────────
-
+// ─── Keyboard Shortcuts ───────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  // Ctrl+Space: command palette
-  if (e.ctrlKey && e.code === 'Space') {
-    e.preventDefault();
-    toggleCommandPalette();
-    return;
-  }
+  if (e.ctrlKey && e.code === 'Space') { e.preventDefault(); toggleCommandPalette(); return; }
 
-  // When command palette is open
   if (state.commandPaletteOpen) {
-    if (e.key === 'Escape') {
-      toggleCommandPalette();
-      return;
-    }
+    if (e.key === 'Escape') { toggleCommandPalette(); return; }
     if (e.key === 'Enter') {
-      const selected = document.querySelector('#command-palette .result-item.selected')
-        || document.querySelector('#command-palette .result-item');
-      if (selected) selected.click();
+      const item = document.querySelector('#command-palette .result-item');
+      if (item) item.click();
       return;
     }
-    return; // Let the input handle other keys
-  }
-
-  // Ctrl+N: new agent
-  if (e.ctrlKey && !e.shiftKey && e.key === 'n') {
-    e.preventDefault();
-    createPane();
     return;
   }
 
-  // Ctrl+Shift+N: new shell
-  if (e.ctrlKey && e.shiftKey && e.key === 'N') {
-    e.preventDefault();
-    createPane({ cmd: '', name: 'shell' });
-    return;
-  }
-
-  // Ctrl+W: close current pane
-  if (e.ctrlKey && e.key === 'w') {
-    e.preventDefault();
-    if (state.focusedPane) killPane(state.focusedPane);
-    return;
-  }
-
-  // Ctrl+1-9: focus pane by number
-  if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
-    e.preventDefault();
-    focusByNumber(parseInt(e.key));
-    return;
-  }
-
-  // Ctrl+Tab: cycle panes
+  if (e.ctrlKey && !e.shiftKey && e.key === 'n') { e.preventDefault(); createPane(); return; }
+  if (e.ctrlKey && e.shiftKey && e.key === 'N') { e.preventDefault(); createPane({ name: 'shell', cmd: '' }); return; }
+  if (e.ctrlKey && e.key === 'w') { e.preventDefault(); if (state.focusedPane) killPane(state.focusedPane); return; }
+  if (e.ctrlKey && e.key >= '1' && e.key <= '9') { e.preventDefault(); focusByNumber(parseInt(e.key)); return; }
   if (e.ctrlKey && e.key === 'Tab') {
     e.preventDefault();
     const ids = [...state.panes.keys()];
     if (ids.length === 0) return;
-    const currentIdx = ids.indexOf(state.focusedPane);
-    const nextIdx = (currentIdx + 1) % ids.length;
-    focusPane(ids[nextIdx]);
+    const idx = ids.indexOf(state.focusedPane);
+    focusPane(ids[(idx + 1) % ids.length]);
     return;
   }
 });
 
-// Command palette input handler
+// ─── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Set up command palette HTML
   const palette = document.getElementById('command-palette');
-  palette.innerHTML = `
-    <input type="text" placeholder="Type a command or agent name..." spellcheck="false" autocomplete="off">
-    <div class="results"></div>
-  `;
+  palette.innerHTML = '<input type="text" placeholder="Type a command..." spellcheck="false" autocomplete="off"><div class="results"></div>';
+  palette.querySelector('input').addEventListener('input', (e) => renderPaletteResults(e.target.value));
 
-  const input = palette.querySelector('input');
-  input.addEventListener('input', () => {
-    renderPaletteResults(input.value);
-  });
-});
-
-// ─── Window Resize ────────────────────────────────────
-
-window.addEventListener('resize', () => {
-  updateLayout();
-});
-
-// ─── Init ─────────────────────────────────────────────
-
-// Start with one Claude Code pane
-window.addEventListener('DOMContentLoaded', async () => {
+  // Show welcome screen
   updateStatusBar();
-  await createPane({ name: 'main', cmd: 'claude' });
+  showWelcome();
 });
+
+window.addEventListener('resize', () => updateLayout());

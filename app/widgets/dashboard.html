@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a; color: #e0e0e0;
+  font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
+  padding: 16px; height: 100vh;
+  display: flex; flex-direction: column; gap: 12px;
+}
+h2 { font-size: 14px; color: #4fc3f7; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; }
+.info { color: #888; font-size: 12px; line-height: 1.8; }
+.info span { color: #4fc3f7; }
+.actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.btn {
+  padding: 8px 16px; background: #1a1a1a; border: 1px solid #333;
+  border-radius: 6px; color: #e0e0e0; cursor: pointer; font-family: inherit;
+  font-size: 12px; transition: all 0.15s;
+}
+.btn:hover { background: #1e3a5f; border-color: #4fc3f7; color: #4fc3f7; }
+.status-line { display: flex; align-items: center; gap: 8px; padding: 8px; background: #111; border-radius: 4px; margin: 4px 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+.dot.off { background: #555; }
+</style>
+</head>
+<body>
+  <h2>Sworm Dashboard</h2>
+  <div class="info">
+    Platform: <span>Windows 11</span><br>
+    Version: <span>Sworm v1.0</span><br>
+    Status: <span>Running</span>
+  </div>
+
+  <h2 style="margin-top:16px">Quick Actions</h2>
+  <div class="actions">
+    <button class="btn" onclick="cmd('new agent')">+ Agent</button>
+    <button class="btn" onclick="cmd('new shell')">+ Shell</button>
+    <button class="btn" onclick="cmd('new launcher')">+ Launcher</button>
+    <button class="btn" onclick="cmd('kill all')">Kill All</button>
+  </div>
+
+  <h2 style="margin-top:16px">Keyboard Shortcuts</h2>
+  <div class="info">
+    <span>Ctrl+N</span> — New Claude Code agent<br>
+    <span>Ctrl+Shift+N</span> — New shell<br>
+    <span>Ctrl+Space</span> — Command palette<br>
+    <span>Ctrl+1-9</span> — Focus pane by number<br>
+    <span>Ctrl+Tab</span> — Cycle panes<br>
+    <span>Ctrl+W</span> — Close pane<br>
+    <span>F11</span> — Toggle fullscreen
+  </div>
+
+<script>
+function cmd(c) {
+  window.parent.postMessage({ type: 'sworm-command', cmd: c }, '*');
+}
+</script>
+</body>
+</html>
