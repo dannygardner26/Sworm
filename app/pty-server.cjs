@@ -49,7 +49,7 @@ function handleMessage(msg) {
         name: 'xterm-256color',
         cols: cols || 120,
         rows: rows || 30,
-        cwd: cwd || process.cwd(),
+        cwd: cwd || require('os').homedir(),
         env: { ...process.env, SWORM_PANE_ID: id },
       });
 

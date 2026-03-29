@@ -105,10 +105,20 @@ async function createPane(opts = {}) {
   // Connect input to PTY
   terminal.onData((data) => window.sworm.pty.write(id, data));
 
+  // Auto-resize terminal when pane container changes size
+  const resizeObserver = new ResizeObserver(() => {
+    try {
+      fitAddon.fit();
+      const dims = fitAddon.proposeDimensions();
+      if (dims) window.sworm.pty.resize(id, dims.cols, dims.rows);
+    } catch {}
+  });
+  resizeObserver.observe(termEl);
+
   // Store state
   state.panes.set(id, {
     terminal, fitAddon, number, name, type: 'terminal',
-    element: paneEl, active: true,
+    element: paneEl, active: true, resizeObserver,
   });
 
   // Layout first, then fit terminal after a frame
@@ -116,7 +126,7 @@ async function createPane(opts = {}) {
   focusPane(id);
 
   // Delayed fit — must happen after layout is computed
-  await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 100));
   try {
     fitAddon.fit();
     const dims = fitAddon.proposeDimensions();
@@ -190,6 +200,7 @@ function killPane(id) {
   const pane = state.panes.get(id);
   if (!pane) return;
   if (pane.type === 'terminal') {
+    if (pane.resizeObserver) pane.resizeObserver.disconnect();
     pane.terminal.dispose();
     window.sworm.pty.kill(id);
   }
@@ -423,4 +434,23 @@ document.addEventListener('DOMContentLoaded', () => {
   showWelcome();
 });
 
-window.addEventListener('resize', () => updateLayout());
+// Debounced resize — refit all terminal panes when window resizes
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    updateLayout();
+    // Double-fit after a frame to catch any layout shifts
+    requestAnimationFrame(() => {
+      for (const [id, pane] of state.panes) {
+        if (pane.type === 'terminal') {
+          try {
+            pane.fitAddon.fit();
+            const dims = pane.fitAddon.proposeDimensions();
+            if (dims) window.sworm.pty.resize(id, dims.cols, dims.rows);
+          } catch {}
+        }
+      }
+    });
+  }, 100);
+});
