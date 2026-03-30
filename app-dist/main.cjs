@@ -75,8 +75,12 @@ function createWindow() {
         },
     });
     mainWindow.loadFile((0, node_path_1.join)(__dirname, '..', 'app', 'renderer', 'index.html'));
-    // Open DevTools for debugging (remove later)
-    mainWindow.webContents.openDevTools({ mode: 'bottom' });
+    // Open DevTools with F12
+    mainWindow.webContents.on('before-input-event', (_e, input) => {
+        if (input.key === 'F12' && input.type === 'keyDown') {
+            mainWindow?.webContents.toggleDevTools();
+        }
+    });
     mainWindow.on('closed', () => {
         mainWindow = null;
         ptyProcess?.kill();

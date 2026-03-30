@@ -83,8 +83,12 @@ function createWindow() {
 
   mainWindow.loadFile(join(__dirname, '..', 'app', 'renderer', 'index.html'));
 
-  // Open DevTools for debugging (remove later)
-  mainWindow.webContents.openDevTools({ mode: 'bottom' });
+  // Open DevTools with F12
+  mainWindow.webContents.on('before-input-event', (_e, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow?.webContents.toggleDevTools();
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
