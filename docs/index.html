@@ -452,10 +452,10 @@
     const ctx = canvas.getContext('2d');
 
     // --- Config ---
-    const SEG = 60;
-    const HEAD_R = 6;
-    const TAIL_R = 2;
-    const BASE_SPACING = 4;
+    const SEG = 50;
+    const HEAD_R = 10;
+    const TAIL_R = 3;
+    const BASE_SPACING = 5;
     const DPR = window.devicePixelRatio || 1;
 
     // --- State ---
@@ -556,16 +556,16 @@
       const sp = toScreen(pp.x, pp.y);
 
       // Gentle idle sway only
-      const idleFactor = Math.min(idleTime * 0.3, 1);
-      const swayX = Math.sin(time * 1.2) * 6 * idleFactor;
-      const swayY = Math.cos(time * 0.9) * 4 * idleFactor;
+      const idleFactor = Math.min(idleTime * 0.5, 1);
+      const swayX = Math.sin(time * 0.6) * 4 * idleFactor;
+      const swayY = Math.cos(time * 0.4) * 3 * idleFactor;
 
       headTarget.x = sp.x + swayX;
       headTarget.y = sp.y + swayY;
 
-      // Smooth head tracking
-      segments[0].x += (headTarget.x - segments[0].x) * 0.15;
-      segments[0].y += (headTarget.y - segments[0].y) * 0.15;
+      // Very slow, smooth head tracking — like drifting through water
+      segments[0].x += (headTarget.x - segments[0].x) * 0.04;
+      segments[0].y += (headTarget.y - segments[0].y) * 0.04;
 
       // Smooth head angle
       if (segments.length >= 2) {
@@ -576,7 +576,7 @@
         let diff = targetAngle - smoothHeadAngle;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
-        smoothHeadAngle += diff * 0.1;
+        smoothHeadAngle += diff * 0.05;
       }
 
       // Simple follow chain — no undulation forces, just constraint
@@ -682,7 +682,7 @@
       const a = smoothHeadAngle;
       const eyeForward = HEAD_R * 0.5;
       const eyeSpread = HEAD_R * 0.5;
-      const eyeR = 2.2;
+      const eyeR = 3;
 
       for (let side = -1; side <= 1; side += 2) {
         const ex = head.x + Math.cos(a) * eyeForward + Math.cos(a + Math.PI/2) * side * eyeSpread;
@@ -696,7 +696,7 @@
 
         // Specular highlight
         ctx.beginPath();
-        ctx.arc(ex + eyeR * 0.3, ey - eyeR * 0.3, 0.8, 0, Math.PI * 2);
+        ctx.arc(ex + eyeR * 0.3, ey - eyeR * 0.3, 1.1, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.fill();
       }
