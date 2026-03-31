@@ -470,7 +470,6 @@
     let time = 0;
     let headAngle = 0;
     let smoothHeadAngle = 0;
-    let wormOpacity = 0;
 
     // --- HiDPI resize ---
     function resize() {
@@ -517,10 +516,13 @@
       return { x: px, y: py - window.scrollY };
     }
 
-    // --- Init all segments at logo center (hidden inside logo) ---
-    const initX = innerWidth / 2;
-    const initY = innerHeight * 0.3;
-    for (let i = 0; i < SEG; i++) segments.push({ x: initX, y: initY });
+    // --- Init segments spread along path start so worm is visible immediately ---
+    for (let i = 0; i < SEG; i++) {
+      const t = (i * BASE_SPACING) / (document.body.scrollHeight || 3000);
+      const p = getPathPoint(0);
+      const sp = toScreen(p.x, p.y);
+      segments.push({ x: sp.x, y: sp.y + i * BASE_SPACING });
+    }
 
     window.addEventListener('scroll', function() {
       scrollY = window.scrollY;
@@ -597,32 +599,18 @@
         smoothHeadAngle += diff * 0.1;
       }
 
-      // Emerge from logo: segments peel out one by one
-      const logo = getLogoCenter();
-      const emergeProgress = Math.min(smoothScrollT / 0.08, 1);
-      const segmentsOut = Math.floor(emergeProgress * SEG);
-
+      // Simple chain follow
       for (let i = 1; i < SEG; i++) {
-        if (i < segmentsOut) {
-          // Emerged — normal chain follow
-          const prev = segments[i-1];
-          const dx = prev.x - segments[i].x;
-          const dy = prev.y - segments[i].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > BASE_SPACING) {
-            const ratio = BASE_SPACING / dist;
-            segments[i].x = prev.x - dx * ratio;
-            segments[i].y = prev.y - dy * ratio;
-          }
-        } else {
-          // Still inside logo — stay anchored
-          segments[i].x += (logo.x - segments[i].x) * 0.15;
-          segments[i].y += (logo.y - segments[i].y) * 0.15;
+        const prev = segments[i-1];
+        const dx = prev.x - segments[i].x;
+        const dy = prev.y - segments[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > BASE_SPACING) {
+          const ratio = BASE_SPACING / dist;
+          segments[i].x = prev.x - dx * ratio;
+          segments[i].y = prev.y - dy * ratio;
         }
       }
-
-      // Worm visible as soon as any segments have emerged
-      wormOpacity = segmentsOut > 2 ? 1 : 0;
     }
 
     // --- Draw ---
@@ -631,7 +619,7 @@
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.clearRect(0, 0, innerWidth, innerHeight);
 
-      if (segments.length < 3 || wormOpacity < 0.01) { ctx.restore(); return; }
+      if (segments.length < 3) { ctx.restore(); return; }
 
       // Build smooth body outline using Catmull-Rom spline
       const leftEdge = [];
