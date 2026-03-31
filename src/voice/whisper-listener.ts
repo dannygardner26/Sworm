@@ -7,12 +7,12 @@ import { parseVoiceCommand, type VoiceCommand } from './commands.js';
 import type { VoiceListener } from './listener.js';
 
 export interface WhisperOptions {
-  modelPath: string;           // Path to whisper.cpp model file (e.g., ggml-base.en.bin)
-  whisperPath?: string;        // Path to whisper.cpp binary (default: 'whisper-cpp' in PATH)
-  wakeWord?: string;           // Wake word (default: 'sworm')
-  sampleRate?: number;         // Audio sample rate (default: 16000)
-  chunkDurationMs?: number;    // Audio chunk duration in ms (default: 3000)
-  language?: string;           // Language code (default: 'en')
+  modelPath: string; // Path to whisper.cpp model file (e.g., ggml-base.en.bin)
+  whisperPath?: string; // Path to whisper.cpp binary (default: 'whisper-cpp' in PATH)
+  wakeWord?: string; // Wake word (default: 'sworm')
+  sampleRate?: number; // Audio sample rate (default: 16000)
+  chunkDurationMs?: number; // Audio chunk duration in ms (default: 3000)
+  language?: string; // Language code (default: 'en')
 }
 
 export class WhisperListener implements VoiceListener {
@@ -84,7 +84,11 @@ export class WhisperListener implements VoiceListener {
       const text = await this.transcribe(wavPath);
 
       // Clean up temp file
-      try { unlinkSync(wavPath); } catch { /* ignore cleanup errors */ }
+      try {
+        unlinkSync(wavPath);
+      } catch {
+        /* ignore cleanup errors */
+      }
 
       if (!text.trim()) return;
 
@@ -111,14 +115,19 @@ export class WhisperListener implements VoiceListener {
   private transcribe(wavPath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const proc = spawn(this.options.whisperPath, [
-        '-m', this.options.modelPath,
-        '-f', wavPath,
-        '-l', this.options.language,
+        '-m',
+        this.options.modelPath,
+        '-f',
+        wavPath,
+        '-l',
+        this.options.language,
         '--no-timestamps',
       ]);
 
       let output = '';
-      proc.stdout.on('data', (data: Buffer) => { output += data.toString(); });
+      proc.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
       proc.on('close', (code) => {
         if (code === 0) resolve(output.trim());
         else reject(new Error(`whisper-cpp exited with code ${code}`));
@@ -137,13 +146,13 @@ export class WhisperListener implements VoiceListener {
     header.writeUInt32LE(fileLen, 4);
     header.write('WAVE', 8);
     header.write('fmt ', 12);
-    header.writeUInt32LE(16, 16);       // fmt chunk size
-    header.writeUInt16LE(1, 20);        // PCM format
-    header.writeUInt16LE(1, 22);        // mono
+    header.writeUInt32LE(16, 16); // fmt chunk size
+    header.writeUInt16LE(1, 20); // PCM format
+    header.writeUInt16LE(1, 22); // mono
     header.writeUInt32LE(this.options.sampleRate, 24);
-    header.writeUInt32LE(this.options.sampleRate * 2, 28);  // byte rate
-    header.writeUInt16LE(2, 32);        // block align
-    header.writeUInt16LE(16, 34);       // bits per sample
+    header.writeUInt32LE(this.options.sampleRate * 2, 28); // byte rate
+    header.writeUInt16LE(2, 32); // block align
+    header.writeUInt16LE(16, 34); // bits per sample
     header.write('data', 36);
     header.writeUInt32LE(dataLen, 40);
 

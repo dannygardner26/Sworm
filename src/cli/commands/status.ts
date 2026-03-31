@@ -2,10 +2,7 @@ import type { Command } from 'commander';
 import type { Swarm } from '../../core/swarm.js';
 import { printStatus, printError } from '../output.js';
 
-export function statusCommand(
-  program: Command,
-  getSwarm: () => Swarm,
-): void {
+export function statusCommand(program: Command, getSwarm: () => Swarm): void {
   program
     .command('status')
     .description('Show status of active worms')

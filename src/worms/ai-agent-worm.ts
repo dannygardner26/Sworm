@@ -37,8 +37,7 @@ export class AIAgentWorm extends Worm {
     // Create git worktree if branch specified
     if (params.branch) {
       const worktreePath =
-        params.worktreePath ??
-        path.join(repoPath, '..', `worktree-${this.id}-${params.branch}`);
+        params.worktreePath ?? path.join(repoPath, '..', `worktree-${this.id}-${params.branch}`);
       try {
         execSync(`git -C "${repoPath}" worktree add "${worktreePath}" ${params.branch}`, {
           stdio: 'pipe',

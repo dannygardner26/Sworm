@@ -6,7 +6,7 @@ export type HotkeyHandler = (action: string, args?: Record<string, unknown>) => 
 
 export class HotkeyManager {
   private backend = new Win32HotkeyBackend();
-  private bindings = new Map<number, Keybinding>();  // id -> binding
+  private bindings = new Map<number, Keybinding>(); // id -> binding
   private handler: HotkeyHandler | null = null;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
   private nextId = 1;

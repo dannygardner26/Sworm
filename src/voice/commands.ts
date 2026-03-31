@@ -1,5 +1,17 @@
 export interface VoiceCommand {
-  action: 'deploy' | 'kill' | 'kill-all' | 'status' | 'focus' | 'list' | 'focus-number' | 'expand' | 'shrink' | 'fullscreen' | 'minimize-all' | 'toggle-visibility';
+  action:
+    | 'deploy'
+    | 'kill'
+    | 'kill-all'
+    | 'status'
+    | 'focus'
+    | 'list'
+    | 'focus-number'
+    | 'expand'
+    | 'shrink'
+    | 'fullscreen'
+    | 'minimize-all'
+    | 'toggle-visibility';
   target?: string;
 }
 
@@ -12,7 +24,11 @@ interface CommandPattern {
 const FILLER_WORDS = /\b(please|the|um|uh|like|just|can you|could you)\b/gi;
 
 const PATTERNS: CommandPattern[] = [
-  { pattern: /deploy\s+(\w+)(?:\s+formation)?/i, action: 'deploy', extract: (m) => ({ target: m[1] }) },
+  {
+    pattern: /deploy\s+(\w+)(?:\s+formation)?/i,
+    action: 'deploy',
+    extract: (m) => ({ target: m[1] }),
+  },
   { pattern: /switch\s+to\s+(\w+)/i, action: 'deploy', extract: (m) => ({ target: m[1] }) },
   { pattern: /kill\s+(?:all|everything)/i, action: 'kill-all' },
   { pattern: /kill\s+(\w+)/i, action: 'kill', extract: (m) => ({ target: m[1] }) },
@@ -22,7 +38,11 @@ const PATTERNS: CommandPattern[] = [
   // Layout commands — must be BEFORE numbered agent focus (which is a catch-all)
   { pattern: /expand\s+(?:agent\s+)?(\d+)/i, action: 'expand', extract: (m) => ({ target: m[1] }) },
   { pattern: /shrink\s+(?:agent\s+)?(\d+)/i, action: 'shrink', extract: (m) => ({ target: m[1] }) },
-  { pattern: /(?:full\s*screen|maximize)\s+(?:agent\s+)?(\d+)/i, action: 'fullscreen', extract: (m) => ({ target: m[1] }) },
+  {
+    pattern: /(?:full\s*screen|maximize)\s+(?:agent\s+)?(\d+)/i,
+    action: 'fullscreen',
+    extract: (m) => ({ target: m[1] }),
+  },
   // Numbered agent focus — must be LAST among digit-matching patterns
   { pattern: /(?:agent\s+)?(\d+)$/i, action: 'focus-number', extract: (m) => ({ target: m[1] }) },
   { pattern: /minimize\s+all/i, action: 'minimize-all' },

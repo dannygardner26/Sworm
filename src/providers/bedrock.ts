@@ -13,15 +13,16 @@ export class BedrockProvider implements LLMProvider {
   }
 
   async chat(messages: LLMMessage[], tools?: LLMToolDefinition[]): Promise<LLMResponse> {
-    const { BedrockRuntimeClient, ConverseCommand } = await import('@aws-sdk/client-bedrock-runtime');
+    const { BedrockRuntimeClient, ConverseCommand } =
+      await import('@aws-sdk/client-bedrock-runtime');
     const client = new BedrockRuntimeClient({ region: this.region });
 
     // Extract system message
-    const systemMsg = messages.find(m => m.role === 'system');
-    const nonSystemMsgs = messages.filter(m => m.role !== 'system');
+    const systemMsg = messages.find((m) => m.role === 'system');
+    const nonSystemMsgs = messages.filter((m) => m.role !== 'system');
 
     // Convert messages to Bedrock Converse format
-    const bedrockMessages = nonSystemMsgs.map(m => {
+    const bedrockMessages = nonSystemMsgs.map((m) => {
       if (m.role === 'tool') {
         return {
           role: 'user' as const,
@@ -31,7 +32,7 @@ export class BedrockProvider implements LLMProvider {
       if (m.role === 'assistant' && m.toolCalls?.length) {
         return {
           role: 'assistant' as const,
-          content: m.toolCalls.map(tc => ({
+          content: m.toolCalls.map((tc) => ({
             toolUse: { toolUseId: tc.id, name: tc.name, input: tc.arguments },
           })),
         };
@@ -39,11 +40,17 @@ export class BedrockProvider implements LLMProvider {
       return { role: m.role as 'user' | 'assistant', content: [{ text: m.content }] };
     });
 
-    const toolConfig = tools?.length ? {
-      tools: tools.map(t => ({
-        toolSpec: { name: t.name, description: t.description, inputSchema: { json: t.parameters } },
-      })),
-    } : undefined;
+    const toolConfig = tools?.length
+      ? {
+          tools: tools.map((t) => ({
+            toolSpec: {
+              name: t.name,
+              description: t.description,
+              inputSchema: { json: t.parameters },
+            },
+          })),
+        }
+      : undefined;
 
     const command = new ConverseCommand({
       modelId: this.model,
@@ -71,8 +78,18 @@ export class BedrockProvider implements LLMProvider {
     return {
       content,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      stopReason: response.stopReason === 'tool_use' ? 'tool_use' : response.stopReason === 'max_tokens' ? 'max_tokens' : 'end_turn',
-      usage: response.usage ? { inputTokens: response.usage.inputTokens ?? 0, outputTokens: response.usage.outputTokens ?? 0 } : undefined,
+      stopReason:
+        response.stopReason === 'tool_use'
+          ? 'tool_use'
+          : response.stopReason === 'max_tokens'
+            ? 'max_tokens'
+            : 'end_turn',
+      usage: response.usage
+        ? {
+            inputTokens: response.usage.inputTokens ?? 0,
+            outputTokens: response.usage.outputTokens ?? 0,
+          }
+        : undefined,
     };
   }
 }

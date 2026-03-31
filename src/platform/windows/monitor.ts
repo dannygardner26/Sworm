@@ -87,7 +87,12 @@ export function getAll(): Promise<MonitorInfo[]> {
   return new Promise((resolve, reject) => {
     const monitors: MonitorInfo[] = [];
 
-    const callback = (hMonitor: number, _hdc: number, _lprcClip: number, _lParam: number): boolean => {
+    const callback = (
+      hMonitor: number,
+      _hdc: number,
+      _lprcClip: number,
+      _lParam: number,
+    ): boolean => {
       const info = {
         cbSize: koffi.sizeof(MONITORINFOEXW),
         rcMonitor: { left: 0, top: 0, right: 0, bottom: 0 },

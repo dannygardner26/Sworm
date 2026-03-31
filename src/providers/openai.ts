@@ -18,7 +18,7 @@ export class OpenAIProvider implements LLMProvider {
     const { default: OpenAI } = await import('openai');
     const client = new OpenAI({ apiKey: this.apiKey, baseURL: this.baseUrl });
 
-    const openaiMessages = messages.map(m => {
+    const openaiMessages = messages.map((m) => {
       if (m.role === 'tool') {
         return { role: 'tool' as const, tool_call_id: m.toolCallId!, content: m.content };
       }
@@ -26,7 +26,7 @@ export class OpenAIProvider implements LLMProvider {
         return {
           role: 'assistant' as const,
           content: m.content || null,
-          tool_calls: m.toolCalls.map(tc => ({
+          tool_calls: m.toolCalls.map((tc) => ({
             id: tc.id,
             type: 'function' as const,
             function: { name: tc.name, arguments: JSON.stringify(tc.arguments) },
@@ -36,7 +36,7 @@ export class OpenAIProvider implements LLMProvider {
       return { role: m.role, content: m.content };
     });
 
-    const openaiTools = tools?.map(t => ({
+    const openaiTools = tools?.map((t) => ({
       type: 'function' as const,
       function: { name: t.name, description: t.description, parameters: t.parameters },
     }));
@@ -57,8 +57,18 @@ export class OpenAIProvider implements LLMProvider {
     return {
       content: choice.message.content ?? '',
       toolCalls: toolCalls?.length ? toolCalls : undefined,
-      stopReason: choice.finish_reason === 'tool_calls' ? 'tool_use' : choice.finish_reason === 'length' ? 'max_tokens' : 'end_turn',
-      usage: response.usage ? { inputTokens: response.usage.prompt_tokens, outputTokens: response.usage.completion_tokens } : undefined,
+      stopReason:
+        choice.finish_reason === 'tool_calls'
+          ? 'tool_use'
+          : choice.finish_reason === 'length'
+            ? 'max_tokens'
+            : 'end_turn',
+      usage: response.usage
+        ? {
+            inputTokens: response.usage.prompt_tokens,
+            outputTokens: response.usage.completion_tokens,
+          }
+        : undefined,
     };
   }
 }

@@ -81,7 +81,7 @@ export class ClaudeWorm extends Worm {
   async findWindow(): Promise<number> {
     // Find new windows that appeared after spawn
     const current = await this.platform.windows.findByTitle(/./);
-    const newWindows = current.filter(h => !this.windowsBefore.has(h));
+    const newWindows = current.filter((h) => !this.windowsBefore.has(h));
 
     if (newWindows.length > 0) {
       return newWindows[0];

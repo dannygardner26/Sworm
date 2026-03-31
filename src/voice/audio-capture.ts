@@ -1,11 +1,11 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
 export interface AudioCaptureOptions {
-  sampleRate?: number;      // default: 16000
-  channels?: number;        // default: 1 (mono)
-  bitDepth?: number;        // default: 16
-  device?: string;          // OS audio device name
-  recorder?: 'sox' | 'ffmpeg';  // default: try sox first, fallback to ffmpeg
+  sampleRate?: number; // default: 16000
+  channels?: number; // default: 1 (mono)
+  bitDepth?: number; // default: 16
+  device?: string; // OS audio device name
+  recorder?: 'sox' | 'ffmpeg'; // default: try sox first, fallback to ffmpeg
 }
 
 export class AudioCapture {
@@ -29,24 +29,42 @@ export class AudioCapture {
     // ffmpeg -f dshow -i audio="Microphone" -ar 16000 -ac 1 -f s16le -
 
     if (this.options.recorder === 'sox') {
-      this.process = spawn('sox', [
-        '-d',           // default audio device
-        '-t', 'raw',    // raw PCM output
-        '-r', String(this.options.sampleRate),
-        '-c', String(this.options.channels),
-        '-b', String(this.options.bitDepth),
-        '-e', 'signed-integer',
-        '-',            // stdout
-      ], { stdio: ['pipe', 'pipe', 'pipe'] });
+      this.process = spawn(
+        'sox',
+        [
+          '-d', // default audio device
+          '-t',
+          'raw', // raw PCM output
+          '-r',
+          String(this.options.sampleRate),
+          '-c',
+          String(this.options.channels),
+          '-b',
+          String(this.options.bitDepth),
+          '-e',
+          'signed-integer',
+          '-', // stdout
+        ],
+        { stdio: ['pipe', 'pipe', 'pipe'] },
+      );
     } else {
-      this.process = spawn('ffmpeg', [
-        '-f', 'dshow',
-        '-i', `audio=${this.options.device}`,
-        '-ar', String(this.options.sampleRate),
-        '-ac', String(this.options.channels),
-        '-f', 's16le',
-        '-',
-      ], { stdio: ['pipe', 'pipe', 'pipe'] });
+      this.process = spawn(
+        'ffmpeg',
+        [
+          '-f',
+          'dshow',
+          '-i',
+          `audio=${this.options.device}`,
+          '-ar',
+          String(this.options.sampleRate),
+          '-ac',
+          String(this.options.channels),
+          '-f',
+          's16le',
+          '-',
+        ],
+        { stdio: ['pipe', 'pipe', 'pipe'] },
+      );
     }
 
     if (!this.process.stdout) throw new Error('Failed to capture audio stream');

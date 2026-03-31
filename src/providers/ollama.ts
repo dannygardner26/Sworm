@@ -13,14 +13,14 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async chat(messages: LLMMessage[], tools?: LLMToolDefinition[]): Promise<LLMResponse> {
-    const ollamaMessages = messages.map(m => {
+    const ollamaMessages = messages.map((m) => {
       if (m.role === 'tool') {
         return { role: 'tool' as const, content: m.content };
       }
       return { role: m.role, content: m.content };
     });
 
-    const ollamaTools = tools?.map(t => ({
+    const ollamaTools = tools?.map((t) => ({
       type: 'function',
       function: { name: t.name, description: t.description, parameters: t.parameters },
     }));
@@ -40,7 +40,7 @@ export class OllamaProvider implements LLMProvider {
       throw new Error(`Ollama API error: ${response.status} ${await response.text()}`);
     }
 
-    const data = await response.json() as any;
+    const data = (await response.json()) as any;
     const msg = data.message;
 
     const toolCalls = msg.tool_calls?.map((tc: any, i: number) => ({
@@ -53,7 +53,9 @@ export class OllamaProvider implements LLMProvider {
       content: msg.content ?? '',
       toolCalls: toolCalls?.length ? toolCalls : undefined,
       stopReason: toolCalls?.length ? 'tool_use' : data.done ? 'end_turn' : 'max_tokens',
-      usage: data.eval_count ? { inputTokens: data.prompt_eval_count ?? 0, outputTokens: data.eval_count ?? 0 } : undefined,
+      usage: data.eval_count
+        ? { inputTokens: data.prompt_eval_count ?? 0, outputTokens: data.eval_count ?? 0 }
+        : undefined,
     };
   }
 }

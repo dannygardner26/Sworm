@@ -15,10 +15,7 @@ import { printSuccess, printError } from '../output.js';
  *   sworm run chrome http://…     → browser
  *   sworm run notepad.exe         → any executable
  */
-export function runCommand(
-  program: Command,
-  getSwarm: () => Swarm,
-): void {
+export function runCommand(program: Command, getSwarm: () => Swarm): void {
   program
     .command('run <what> [extra...]')
     .description('Quick-launch a single worm without a formation file')

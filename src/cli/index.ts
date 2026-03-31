@@ -26,7 +26,9 @@ const program = new Command();
 program
   .name('sworm')
   .version('0.2.0')
-  .description('Spatially-aware desktop orchestration — deploy AI agents and apps across multi-monitor setups');
+  .description(
+    'Spatially-aware desktop orchestration — deploy AI agents and apps across multi-monitor setups',
+  );
 
 // Lazy-init platform and swarm so they're only created when a command needs them
 let _platform: PlatformAPI | null = null;
@@ -105,7 +107,9 @@ runCommand(program, getSwarm);
 if (process.argv.length <= 2) {
   import('chalk').then(({ default: chalk }) => {
     import('../config/loader.js').then(({ listFormations, loadFormation }) => {
-      console.log(chalk.bold(`\n  SWORM v0.2.0`) + chalk.dim('  — spatially-aware desktop orchestration\n'));
+      console.log(
+        chalk.bold(`\n  SWORM v0.2.0`) + chalk.dim('  — spatially-aware desktop orchestration\n'),
+      );
 
       // Show active worms if any
       const swarm = getSwarm();
@@ -113,8 +117,10 @@ if (process.argv.length <= 2) {
       if (worms.length > 0) {
         console.log(chalk.bold('  Active worms:'));
         for (const w of worms) {
-          const status = w.status === 'running' || w.status === 'positioned'
-            ? chalk.green(w.status) : chalk.yellow(w.status);
+          const status =
+            w.status === 'running' || w.status === 'positioned'
+              ? chalk.green(w.status)
+              : chalk.yellow(w.status);
           console.log(`    [${w.number ?? '-'}] ${w.id} ${chalk.dim(w.type)} ${status}`);
         }
         console.log();

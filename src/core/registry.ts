@@ -2,11 +2,7 @@ import type { WormConfig } from '../config/schema.js';
 import type { PlatformAPI } from '../platform/types.js';
 import type { Worm } from './worm.js';
 
-export type WormConstructor = new (
-  id: string,
-  config: WormConfig,
-  platform: PlatformAPI,
-) => Worm;
+export type WormConstructor = new (id: string, config: WormConfig, platform: PlatformAPI) => Worm;
 
 export class WormTypeRegistry {
   private types = new Map<string, WormConstructor>();

@@ -13,7 +13,7 @@ export async function spawn(
   // Windows Terminal: force a new window with `-w new` (only if not already specified)
   const isWt = command === 'wt' || command === 'wt.exe';
   const hasWindowFlag = args.includes('-w') || args.includes('--window');
-  const finalArgs = (isWt && !hasWindowFlag) ? ['-w', 'new', ...args] : args;
+  const finalArgs = isWt && !hasWindowFlag ? ['-w', 'new', ...args] : args;
 
   const child = cpSpawn(command, finalArgs, {
     cwd: opts?.cwd,

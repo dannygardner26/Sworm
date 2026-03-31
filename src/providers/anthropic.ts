@@ -17,21 +17,23 @@ export class AnthropicProvider implements LLMProvider {
     const client = new Anthropic({ apiKey: this.apiKey });
 
     // Separate system message
-    const systemMsg = messages.find(m => m.role === 'system');
-    const nonSystemMsgs = messages.filter(m => m.role !== 'system');
+    const systemMsg = messages.find((m) => m.role === 'system');
+    const nonSystemMsgs = messages.filter((m) => m.role !== 'system');
 
     // Convert messages to Anthropic format
-    const anthropicMessages = nonSystemMsgs.map(m => {
+    const anthropicMessages = nonSystemMsgs.map((m) => {
       if (m.role === 'tool') {
         return {
           role: 'user' as const,
-          content: [{ type: 'tool_result' as const, tool_use_id: m.toolCallId!, content: m.content }],
+          content: [
+            { type: 'tool_result' as const, tool_use_id: m.toolCallId!, content: m.content },
+          ],
         };
       }
       if (m.toolCalls && m.toolCalls.length > 0) {
         return {
           role: 'assistant' as const,
-          content: m.toolCalls.map(tc => ({
+          content: m.toolCalls.map((tc) => ({
             type: 'tool_use' as const,
             id: tc.id,
             name: tc.name,
@@ -43,7 +45,7 @@ export class AnthropicProvider implements LLMProvider {
     });
 
     // Convert tools to Anthropic format
-    const anthropicTools = tools?.map(t => ({
+    const anthropicTools = tools?.map((t) => ({
       name: t.name,
       description: t.description,
       input_schema: t.parameters as Record<string, unknown>,
@@ -64,15 +66,27 @@ export class AnthropicProvider implements LLMProvider {
     for (const block of response.content) {
       if (block.type === 'text') content += block.text;
       if (block.type === 'tool_use') {
-        toolCalls.push({ id: block.id, name: block.name, arguments: block.input as Record<string, unknown> });
+        toolCalls.push({
+          id: block.id,
+          name: block.name,
+          arguments: block.input as Record<string, unknown>,
+        });
       }
     }
 
     return {
       content,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      stopReason: response.stop_reason === 'tool_use' ? 'tool_use' : response.stop_reason === 'max_tokens' ? 'max_tokens' : 'end_turn',
-      usage: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens },
+      stopReason:
+        response.stop_reason === 'tool_use'
+          ? 'tool_use'
+          : response.stop_reason === 'max_tokens'
+            ? 'max_tokens'
+            : 'end_turn',
+      usage: {
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+      },
     };
   }
 }

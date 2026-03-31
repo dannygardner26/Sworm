@@ -60,9 +60,11 @@ export const FormationConfigSchema = z.object({
   monitors: z.record(z.string(), z.string()).optional(),
   grid: GridConfigSchema.optional(),
   worms: z.array(WormConfigSchema).min(1),
-  hooks: z.object({
-    pre: z.array(z.string()).optional(),
-    post: z.array(z.string()).optional(),
-  }).optional(),
+  hooks: z
+    .object({
+      pre: z.array(z.string()).optional(),
+      post: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 export type FormationConfig = z.infer<typeof FormationConfigSchema>;

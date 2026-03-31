@@ -5,7 +5,15 @@ import { homedir } from 'node:os';
 import { parse as parseYaml } from 'yaml';
 
 const ProviderEntrySchema = z.object({
-  type: z.enum(['anthropic', 'openai', 'azure-openai', 'gemini', 'bedrock', 'ollama', 'claude-code']),
+  type: z.enum([
+    'anthropic',
+    'openai',
+    'azure-openai',
+    'gemini',
+    'bedrock',
+    'ollama',
+    'claude-code',
+  ]),
   apiKey: z.string().optional(),
   baseUrl: z.string().optional(),
   region: z.string().optional(),
@@ -15,10 +23,12 @@ const ProviderEntrySchema = z.object({
 
 const ProvidersFileSchema = z.object({
   providers: z.record(z.string(), ProviderEntrySchema),
-  defaults: z.object({
-    provider: z.string().optional(),
-    model: z.string().optional(),
-  }).optional(),
+  defaults: z
+    .object({
+      provider: z.string().optional(),
+      model: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type ProvidersFile = z.infer<typeof ProvidersFileSchema>;

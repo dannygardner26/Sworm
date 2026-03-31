@@ -16,7 +16,7 @@ export class GeminiProvider implements LLMProvider {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(this.apiKey);
 
-    const functionDeclarations = tools?.map(t => ({
+    const functionDeclarations = tools?.map((t) => ({
       name: t.name,
       description: t.description,
       parameters: t.parameters,
@@ -28,11 +28,11 @@ export class GeminiProvider implements LLMProvider {
     });
 
     // Convert to Gemini format
-    const systemMsg = messages.find(m => m.role === 'system');
+    const systemMsg = messages.find((m) => m.role === 'system');
     const history = messages
-      .filter(m => m.role !== 'system')
+      .filter((m) => m.role !== 'system')
       .slice(0, -1)
-      .map(m => ({
+      .map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       }));
@@ -60,10 +60,12 @@ export class GeminiProvider implements LLMProvider {
       content: text,
       toolCalls: functionCalls?.length ? functionCalls : undefined,
       stopReason: functionCalls?.length ? 'tool_use' : 'end_turn',
-      usage: response.usageMetadata ? {
-        inputTokens: response.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: response.usageMetadata.candidatesTokenCount ?? 0,
-      } : undefined,
+      usage: response.usageMetadata
+        ? {
+            inputTokens: response.usageMetadata.promptTokenCount ?? 0,
+            outputTokens: response.usageMetadata.candidatesTokenCount ?? 0,
+          }
+        : undefined,
     };
   }
 }

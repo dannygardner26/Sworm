@@ -45,11 +45,15 @@ export const VoiceSettingsSchema = z.object({
 
 export const HotkeySettingsSchema = z.object({
   enabled: z.boolean().default(true),
-  bindings: z.array(z.object({
-    key: z.string(),
-    action: z.string(),
-    args: z.record(z.string(), z.unknown()).optional(),
-  })).default([]),
+  bindings: z
+    .array(
+      z.object({
+        key: z.string(),
+        action: z.string(),
+        args: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .default([]),
 });
 
 export const GeneralSettingsSchema = z.object({
@@ -100,9 +104,7 @@ export function saveSettings(settings: SwormSettings): void {
 }
 
 /** Update a specific section of settings. */
-export function updateSettings(
-  patch: Partial<SwormSettings>,
-): SwormSettings {
+export function updateSettings(patch: Partial<SwormSettings>): SwormSettings {
   const current = loadSettings();
   const merged = {
     ...current,

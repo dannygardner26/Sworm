@@ -33,9 +33,7 @@ export function isVoiceSetup(): boolean {
   return existsSync(paths.whisperPath) && existsSync(paths.modelPath);
 }
 
-export async function setupVoice(
-  onProgress?: (msg: string) => void,
-): Promise<VoiceSetupPaths> {
+export async function setupVoice(onProgress?: (msg: string) => void): Promise<VoiceSetupPaths> {
   const log = onProgress ?? (() => {});
   const paths = getVoicePaths();
 
@@ -65,10 +63,9 @@ export async function setupVoice(
       try {
         await downloadFile(WHISPER_BIN_URL, zipPath, log);
         log('Extracting whisper.cpp...');
-        execSync(
-          `powershell -Command "Expand-Archive -Force '${zipPath}' '${VOICE_DIR}'"`,
-          { stdio: 'pipe' },
-        );
+        execSync(`powershell -Command "Expand-Archive -Force '${zipPath}' '${VOICE_DIR}'"`, {
+          stdio: 'pipe',
+        });
         // Find any whisper exe in extracted files (may be whisper-cli.exe, main.exe, etc.)
         const { readdirSync, renameSync, copyFileSync } = await import('node:fs');
         const findExe = (dir: string): string | null => {
@@ -94,7 +91,8 @@ export async function setupVoice(
           const listExes = (dir: string): string[] => {
             const results: string[] = [];
             for (const entry of readdirSync(dir, { withFileTypes: true })) {
-              if (entry.isFile() && entry.name.endsWith('.exe')) results.push(join(dir, entry.name));
+              if (entry.isFile() && entry.name.endsWith('.exe'))
+                results.push(join(dir, entry.name));
               if (entry.isDirectory()) results.push(...listExes(join(dir, entry.name)));
             }
             return results;
@@ -104,9 +102,14 @@ export async function setupVoice(
           throw new Error('Could not find whisper executable in downloaded archive');
         }
         // Cleanup zip
-        try { const { unlinkSync } = await import('node:fs'); unlinkSync(zipPath); } catch {}
+        try {
+          const { unlinkSync } = await import('node:fs');
+          unlinkSync(zipPath);
+        } catch {}
       } catch (err) {
-        log(`Failed to auto-download whisper.cpp: ${err instanceof Error ? err.message : String(err)}`);
+        log(
+          `Failed to auto-download whisper.cpp: ${err instanceof Error ? err.message : String(err)}`,
+        );
         log('Please install whisper.cpp manually:');
         log('  https://github.com/ggerganov/whisper.cpp/releases');
         log(`  Place whisper-cli.exe in: ${VOICE_DIR}`);
@@ -137,11 +140,7 @@ export async function setupVoice(
   return paths;
 }
 
-function downloadFile(
-  url: string,
-  dest: string,
-  log: (msg: string) => void,
-): Promise<void> {
+function downloadFile(url: string, dest: string, log: (msg: string) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const follow = (url: string, redirects = 0) => {
       if (redirects > 5) {
@@ -177,7 +176,10 @@ function downloadFile(
           }
         });
         res.pipe(file);
-        file.on('finish', () => { file.close(); resolve(); });
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
         file.on('error', reject);
       }).on('error', reject);
     };

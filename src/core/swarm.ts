@@ -16,21 +16,14 @@ export class Swarm {
   private numbering = new WormNumbering();
   private visible = true;
 
-  constructor(
-    platform: PlatformAPI,
-    registry: WormTypeRegistry,
-    formationsDir?: string,
-  ) {
+  constructor(platform: PlatformAPI, registry: WormTypeRegistry, formationsDir?: string) {
     this.platform = platform;
     this.registry = registry;
     this.eventBus = new SwormEventBus();
     this.formationLoader = new FormationLoader(formationsDir);
   }
 
-  async deploy(
-    formationName: string,
-    opts?: { force?: boolean },
-  ): Promise<void> {
+  async deploy(formationName: string, opts?: { force?: boolean }): Promise<void> {
     // If force, kill existing worms first
     if (opts?.force && this.activeWorms.size > 0) {
       await this.kill();
@@ -42,8 +35,7 @@ export class Swarm {
     try {
       config = this.formationLoader.load(formationName);
     } catch (err) {
-      const error =
-        err instanceof Error ? err : new Error(String(err));
+      const error = err instanceof Error ? err : new Error(String(err));
       this.eventBus.emit('formation:failed', formationName, error);
       throw error;
     }
@@ -51,10 +43,7 @@ export class Swarm {
     await this.deployConfig(config, opts);
   }
 
-  async deployConfig(
-    config: FormationConfig,
-    opts?: { force?: boolean },
-  ): Promise<void> {
+  async deployConfig(config: FormationConfig, opts?: { force?: boolean }): Promise<void> {
     // If force, kill existing worms first
     if (opts?.force && this.activeWorms.size > 0) {
       await this.kill();
@@ -69,11 +58,7 @@ export class Swarm {
       try {
         const monitorRef = config.monitors?.[wormConfig.monitor] ?? wormConfig.monitor;
         const monitor = resolveMonitor(monitorRef, monitors);
-        const rect = resolvePosition(
-          wormConfig.position,
-          monitor,
-          config.grid,
-        );
+        const rect = resolvePosition(wormConfig.position, monitor, config.grid);
 
         const worm = this.registry.create(wormConfig, this.platform);
 
@@ -99,9 +84,7 @@ export class Swarm {
     }
 
     if (failureCount > 0) {
-      const error = new Error(
-        `${failureCount}/${config.worms.length} worms failed to deploy`,
-      );
+      const error = new Error(`${failureCount}/${config.worms.length} worms failed to deploy`);
       this.eventBus.emit('formation:failed', formationName, error);
       if (failureCount === config.worms.length) {
         throw error;
@@ -113,7 +96,8 @@ export class Swarm {
     // Apply wallpaper mode if configured (best-effort, won't crash if WorkerW unavailable)
     if (config.mode === 'wallpaper') {
       try {
-        const { parentToDesktop, setWallpaperStyle } = await import('../platform/windows/wallpaper.js');
+        const { parentToDesktop, setWallpaperStyle } =
+          await import('../platform/windows/wallpaper.js');
         for (const worm of this.activeWorms.values()) {
           if (worm.hwnd) {
             try {
@@ -140,7 +124,9 @@ export class Swarm {
       const { removeWallpaperStyle } = await import('../platform/windows/wallpaper.js');
       for (const worm of this.activeWorms.values()) {
         if (worm.hwnd) {
-          try { removeWallpaperStyle(worm.hwnd); } catch {}
+          try {
+            removeWallpaperStyle(worm.hwnd);
+          } catch {}
         }
       }
 

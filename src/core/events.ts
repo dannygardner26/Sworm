@@ -28,24 +28,15 @@ export class SwormEventBus {
     this.emitter.emit(event, ...args);
   }
 
-  on<K extends EventName>(
-    event: K,
-    fn: (...args: SwormEventMap[K]) => void,
-  ): void {
+  on<K extends EventName>(event: K, fn: (...args: SwormEventMap[K]) => void): void {
     this.emitter.on(event, fn as (...args: unknown[]) => void);
   }
 
-  off<K extends EventName>(
-    event: K,
-    fn: (...args: SwormEventMap[K]) => void,
-  ): void {
+  off<K extends EventName>(event: K, fn: (...args: SwormEventMap[K]) => void): void {
     this.emitter.off(event, fn as (...args: unknown[]) => void);
   }
 
-  once<K extends EventName>(
-    event: K,
-    fn: (...args: SwormEventMap[K]) => void,
-  ): void {
+  once<K extends EventName>(event: K, fn: (...args: SwormEventMap[K]) => void): void {
     this.emitter.once(event, fn as (...args: unknown[]) => void);
   }
 

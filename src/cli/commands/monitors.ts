@@ -3,10 +3,7 @@ import ora from 'ora';
 import type { PlatformAPI } from '../../platform/types.js';
 import { printMonitors, printError } from '../output.js';
 
-export function monitorsCommand(
-  program: Command,
-  getPlatform: () => PlatformAPI,
-): void {
+export function monitorsCommand(program: Command, getPlatform: () => PlatformAPI): void {
   program
     .command('monitors')
     .description('List connected monitors')

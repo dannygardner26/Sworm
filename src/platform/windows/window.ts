@@ -50,10 +50,16 @@ const ShowWindow = user32.func('bool ShowWindow(long hwnd, int nCmdShow)');
 const SetForegroundWindow = user32.func('bool SetForegroundWindow(long hwnd)');
 const IsWindowVisible = user32.func('bool IsWindowVisible(long hwnd)');
 const IsIconic = user32.func('bool IsIconic(long hwnd)');
-const PostMessageW = user32.func('bool PostMessageW(long hwnd, uint msg, long wParam, long lParam)');
+const PostMessageW = user32.func(
+  'bool PostMessageW(long hwnd, uint msg, long wParam, long lParam)',
+);
 const GetWindowTextLengthW = user32.func('int GetWindowTextLengthW(long hwnd)');
-const GetWindowTextW = user32.func('int GetWindowTextW(long hwnd, _Out_ uint16 *lpString, int nMaxCount)');
-const GetWindowThreadProcessId = user32.func('uint GetWindowThreadProcessId(long hwnd, _Out_ uint *lpdwProcessId)');
+const GetWindowTextW = user32.func(
+  'int GetWindowTextW(long hwnd, _Out_ uint16 *lpString, int nMaxCount)',
+);
+const GetWindowThreadProcessId = user32.func(
+  'uint GetWindowThreadProcessId(long hwnd, _Out_ uint *lpdwProcessId)',
+);
 const GetWindowRect = user32.func('bool GetWindowRect(long hwnd, _Out_ WRECT *lpRect)');
 
 const SetWindowTextW = user32.func('bool SetWindowTextW(long hwnd, str16 lpString)');
@@ -105,7 +111,15 @@ export async function move(hwnd: number, rect: Rect): Promise<void> {
   if (IsIconic(hwnd)) {
     ShowWindow(hwnd, SW_RESTORE);
   }
-  SetWindowPos(hwnd, HWND_TOP, rect.x, rect.y, rect.width, rect.height, SWP_NOZORDER | SWP_SHOWWINDOW);
+  SetWindowPos(
+    hwnd,
+    HWND_TOP,
+    rect.x,
+    rect.y,
+    rect.width,
+    rect.height,
+    SWP_NOZORDER | SWP_SHOWWINDOW,
+  );
 }
 
 export async function resize(hwnd: number, width: number, height: number): Promise<void> {
@@ -190,7 +204,10 @@ export async function sendToBack(hwnd: number): Promise<void> {
   SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
-export async function setZOrder(hwnd: number, position: 'top' | 'bottom' | 'topmost' | 'notopmost'): Promise<void> {
+export async function setZOrder(
+  hwnd: number,
+  position: 'top' | 'bottom' | 'topmost' | 'notopmost',
+): Promise<void> {
   const map: Record<string, number> = {
     top: HWND_TOP,
     bottom: HWND_BOTTOM,
@@ -201,7 +218,11 @@ export async function setZOrder(hwnd: number, position: 'top' | 'bottom' | 'topm
   SetWindowPos(hwnd, hWndInsertAfter, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
-export async function setExStyle(hwnd: number, addFlags: number, removeFlags?: number): Promise<void> {
+export async function setExStyle(
+  hwnd: number,
+  addFlags: number,
+  removeFlags?: number,
+): Promise<void> {
   let style = GetWindowLongW(hwnd, GWL_EXSTYLE);
   style |= addFlags;
   if (removeFlags !== undefined) {

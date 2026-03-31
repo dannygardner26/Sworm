@@ -13,9 +13,13 @@ const MSG = koffi.struct('HKMSG', {
   pt: POINT,
 });
 
-const RegisterHotKey = user32.func('bool RegisterHotKey(long hWnd, int id, uint fsModifiers, uint vk)');
+const RegisterHotKey = user32.func(
+  'bool RegisterHotKey(long hWnd, int id, uint fsModifiers, uint vk)',
+);
 const UnregisterHotKey = user32.func('bool UnregisterHotKey(long hWnd, int id)');
-const PeekMessageW = user32.func('bool PeekMessageW(_Out_ HKMSG *lpMsg, long hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)');
+const PeekMessageW = user32.func(
+  'bool PeekMessageW(_Out_ HKMSG *lpMsg, long hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)',
+);
 
 const WM_HOTKEY = 0x0312;
 const PM_REMOVE = 0x0001;

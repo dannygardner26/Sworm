@@ -6,7 +6,12 @@
  */
 import { AudioCapture } from './audio-capture.js';
 import { parseVoiceCommand, type VoiceCommand } from './commands.js';
-import { playListeningChime, playAcknowledgeChime, playErrorTone, playReadyTick } from './audio-feedback.js';
+import {
+  playListeningChime,
+  playAcknowledgeChime,
+  playErrorTone,
+  playReadyTick,
+} from './audio-feedback.js';
 import { showListeningOverlay, hideListeningOverlay } from './overlay.js';
 import { writeFileSync, unlinkSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
@@ -298,16 +303,23 @@ export class VoiceActivation {
       writeFileSync(wavPath, wavBuffer);
 
       const proc = spawn(this.config.whisperPath, [
-        '-m', this.config.modelPath,
-        '-f', wavPath,
-        '-l', 'en',
+        '-m',
+        this.config.modelPath,
+        '-f',
+        wavPath,
+        '-l',
+        'en',
         '--no-timestamps',
       ]);
 
       let output = '';
-      proc.stdout.on('data', (data: Buffer) => { output += data.toString(); });
+      proc.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
       proc.on('close', (code) => {
-        try { unlinkSync(wavPath); } catch {}
+        try {
+          unlinkSync(wavPath);
+        } catch {}
         if (code === 0) resolve(output.trim());
         else reject(new Error(`whisper exited with code ${code}`));
       });
@@ -350,8 +362,8 @@ function pcmToWav(pcmData: Buffer, sampleRate: number): Buffer {
   header.write('WAVE', 8);
   header.write('fmt ', 12);
   header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20);        // PCM
-  header.writeUInt16LE(1, 22);        // mono
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(1, 22); // mono
   header.writeUInt32LE(sampleRate, 24);
   header.writeUInt32LE(sampleRate * 2, 28);
   header.writeUInt16LE(2, 32);

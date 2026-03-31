@@ -13,7 +13,7 @@ export class ClaudeCodeProvider implements LLMProvider {
     // detects type === 'claude-code' and spawns the Claude Code CLI instead.
     throw new Error(
       'ClaudeCodeProvider does not support direct chat(). ' +
-      'The AIAgentWorm should detect this provider type and delegate to the Claude Code CLI.'
+        'The AIAgentWorm should detect this provider type and delegate to the Claude Code CLI.',
     );
   }
 }

@@ -3,7 +3,10 @@ import Table from 'cli-table3';
 import type { WormStatusInfo } from '../core/worm.js';
 import type { MonitorInfo } from '../platform/types.js';
 
-export function printFormationList(formations: string[], details?: Map<string, { description?: string; wormCount: number }>): void {
+export function printFormationList(
+  formations: string[],
+  details?: Map<string, { description?: string; wormCount: number }>,
+): void {
   if (formations.length === 0) {
     printInfo('No formations found.');
     return;
@@ -14,7 +17,9 @@ export function printFormationList(formations: string[], details?: Map<string, {
     const name = formations[i];
     const detail = details?.get(name);
     const desc = detail?.description ? chalk.dim(` — ${detail.description}`) : '';
-    const count = detail ? chalk.dim(` (${detail.wormCount} worm${detail.wormCount !== 1 ? 's' : ''})`) : '';
+    const count = detail
+      ? chalk.dim(` (${detail.wormCount} worm${detail.wormCount !== 1 ? 's' : ''})`)
+      : '';
     console.log(`  ${chalk.cyan(`${i + 1}.`)} ${name}${count}${desc}`);
   }
   console.log();

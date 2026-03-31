@@ -22,12 +22,18 @@ const SM_CXSCREEN = 0;
 const SM_CYSCREEN = 1;
 
 // Win32 functions
-const CreateWindowExW = user32.func('long CreateWindowExW(uint dwExStyle, string16 lpClassName, string16 lpWindowName, uint dwStyle, int x, int y, int w, int h, long hWndParent, long hMenu, long hInstance, long lpParam)');
+const CreateWindowExW = user32.func(
+  'long CreateWindowExW(uint dwExStyle, string16 lpClassName, string16 lpWindowName, uint dwStyle, int x, int y, int w, int h, long hWndParent, long hMenu, long hInstance, long lpParam)',
+);
 const ShowWindow = user32.func('bool ShowWindow(long hWnd, int nCmdShow)');
 const DestroyWindow = user32.func('bool DestroyWindow(long hWnd)');
-const SetLayeredWindowAttributes = user32.func('bool SetLayeredWindowAttributes(long hwnd, uint crKey, uint8 bAlpha, uint dwFlags)');
+const SetLayeredWindowAttributes = user32.func(
+  'bool SetLayeredWindowAttributes(long hwnd, uint crKey, uint8 bAlpha, uint dwFlags)',
+);
 const GetSystemMetrics = user32.func('int GetSystemMetrics(int nIndex)');
-const SetWindowPos = user32.func('bool SetWindowPos(long hWnd, long hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags)');
+const SetWindowPos = user32.func(
+  'bool SetWindowPos(long hWnd, long hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags)',
+);
 const GetDC = user32.func('long GetDC(long hWnd)');
 const ReleaseDC = user32.func('int ReleaseDC(long hWnd, long hDC)');
 
@@ -59,11 +65,17 @@ export function showListeningOverlay(): void {
     // Create a layered popup window
     const hwnd = CreateWindowExW(
       WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE,
-      'Static',           // Use built-in Static window class
+      'Static', // Use built-in Static window class
       '  Listening...',
       WS_POPUP | WS_VISIBLE,
-      x, y, width, height,
-      0, 0, 0, 0,
+      x,
+      y,
+      width,
+      height,
+      0,
+      0,
+      0,
+      0,
     ) as number;
 
     if (!hwnd) return;

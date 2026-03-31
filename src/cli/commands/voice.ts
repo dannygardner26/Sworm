@@ -12,7 +12,10 @@ import { loadSettings } from '../../config/settings.js';
 function handleVoiceCommand(command: VoiceCommand, swarm: Swarm): void {
   switch (command.action) {
     case 'deploy':
-      if (!command.target) { printError('Deploy requires a formation name.'); return; }
+      if (!command.target) {
+        printError('Deploy requires a formation name.');
+        return;
+      }
       swarm.deploy(command.target).then(
         () => printSuccess(`Deployed ${command.target}.`),
         (err) => printError(`Deploy failed: ${err instanceof Error ? err.message : String(err)}`),
@@ -38,7 +41,9 @@ function handleVoiceCommand(command: VoiceCommand, swarm: Swarm): void {
       break;
 
     case 'list':
-      try { printFormationList(listFormations()); } catch (err) {
+      try {
+        printFormationList(listFormations());
+      } catch (err) {
         printError(err instanceof Error ? err.message : String(err));
       }
       break;
@@ -90,10 +95,7 @@ function handleVoiceCommand(command: VoiceCommand, swarm: Swarm): void {
   }
 }
 
-export function voiceCommand(
-  program: Command,
-  getSwarm: () => Swarm,
-): void {
+export function voiceCommand(program: Command, getSwarm: () => Swarm): void {
   const voiceCmd = program
     .command('voice')
     .description('Voice command system — listen, setup, or configure');
@@ -106,7 +108,9 @@ export function voiceCommand(
       const spinner = ora('Setting up voice...').start();
       try {
         const { setupVoice } = await import('../../voice/setup.js');
-        const paths = await setupVoice((msg) => { spinner.text = msg; });
+        const paths = await setupVoice((msg) => {
+          spinner.text = msg;
+        });
         spinner.stop();
         printSuccess('Voice setup complete!');
         console.log(chalk.dim(`  Binary: ${paths.whisperPath}`));
@@ -144,13 +148,25 @@ export function voiceCommand(
       const ready = isVoiceSetup();
 
       console.log(chalk.bold('\nVoice Activation\n'));
-      console.log(`  Setup:        ${ready ? chalk.green('Ready') : chalk.red('Not configured')} ${!ready ? chalk.dim('(run: sworm voice setup)') : ''}`);
-      console.log(`  Enabled:      ${settings.voice.enabled ? chalk.green('Yes') : chalk.dim('No')}`);
-      console.log(`  Push-to-talk: ${settings.voice.pushToTalk.enabled ? chalk.green(settings.voice.pushToTalk.hotkey) : chalk.dim('Disabled')}`);
-      console.log(`  Wake word:    ${settings.voice.wakeWord.enabled ? chalk.green(`"hey ${settings.voice.wakeWord.phrase}"`) : chalk.dim('Disabled')}`);
+      console.log(
+        `  Setup:        ${ready ? chalk.green('Ready') : chalk.red('Not configured')} ${!ready ? chalk.dim('(run: sworm voice setup)') : ''}`,
+      );
+      console.log(
+        `  Enabled:      ${settings.voice.enabled ? chalk.green('Yes') : chalk.dim('No')}`,
+      );
+      console.log(
+        `  Push-to-talk: ${settings.voice.pushToTalk.enabled ? chalk.green(settings.voice.pushToTalk.hotkey) : chalk.dim('Disabled')}`,
+      );
+      console.log(
+        `  Wake word:    ${settings.voice.wakeWord.enabled ? chalk.green(`"hey ${settings.voice.wakeWord.phrase}"`) : chalk.dim('Disabled')}`,
+      );
       console.log(`  Recorder:     ${chalk.dim(settings.voice.recorder)}`);
-      console.log(`  Whisper bin:  ${chalk.dim(settings.voice.whisper.binaryPath || paths.whisperPath)}`);
-      console.log(`  Model:        ${chalk.dim(settings.voice.whisper.modelPath || paths.modelPath)}`);
+      console.log(
+        `  Whisper bin:  ${chalk.dim(settings.voice.whisper.binaryPath || paths.whisperPath)}`,
+      );
+      console.log(
+        `  Model:        ${chalk.dim(settings.voice.whisper.modelPath || paths.modelPath)}`,
+      );
       console.log();
     });
 
@@ -179,7 +195,12 @@ export function voiceCommand(
         printSuccess(`Bridge listener on port ${opts.port}`);
         printInfo('Press Ctrl+C to stop.');
         await new Promise<void>((resolve) => {
-          process.on('SIGINT', () => { listener.stop().then(() => resolve(), () => resolve()); });
+          process.on('SIGINT', () => {
+            listener.stop().then(
+              () => resolve(),
+              () => resolve(),
+            );
+          });
         });
         return;
       }
@@ -209,7 +230,9 @@ export function voiceCommand(
       });
 
       va.onCommand((cmd, raw) => {
-        printInfo(`Voice: ${chalk.bold(raw)} → ${chalk.cyan(cmd.action)}${cmd.target ? ` ${cmd.target}` : ''}`);
+        printInfo(
+          `Voice: ${chalk.bold(raw)} → ${chalk.cyan(cmd.action)}${cmd.target ? ` ${cmd.target}` : ''}`,
+        );
         handleVoiceCommand(cmd, swarm);
       });
 

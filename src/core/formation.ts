@@ -1,18 +1,11 @@
 import type { MonitorInfo, Rect } from '../platform/types.js';
-import type {
-  Position,
-  FormationConfig,
-  GridConfigSchema,
-} from '../config/schema.js';
+import type { Position, FormationConfig, GridConfigSchema } from '../config/schema.js';
 import { loadFormation, listFormations } from '../config/loader.js';
 import { z } from 'zod';
 
 type GridConfig = z.infer<typeof GridConfigSchema>;
 
-export function resolveMonitor(
-  ref: string,
-  monitors: MonitorInfo[],
-): MonitorInfo {
+export function resolveMonitor(ref: string, monitors: MonitorInfo[]): MonitorInfo {
   if (monitors.length === 0) {
     throw new Error('No monitors available');
   }
@@ -35,9 +28,7 @@ export function resolveMonitor(
       if (ref.startsWith('index:')) {
         const idx = parseInt(ref.slice(6), 10);
         if (isNaN(idx) || idx < 0 || idx >= monitors.length) {
-          throw new Error(
-            `Monitor index ${idx} out of range (0-${monitors.length - 1})`,
-          );
+          throw new Error(`Monitor index ${idx} out of range (0-${monitors.length - 1})`);
         }
         return monitors[idx];
       }
@@ -46,10 +37,7 @@ export function resolveMonitor(
   }
 }
 
-function parseDimension(
-  value: number | string,
-  reference: number,
-): number {
+function parseDimension(value: number | string, reference: number): number {
   if (typeof value === 'number') return value;
   if (value.endsWith('%')) {
     const pct = parseFloat(value.slice(0, -1));
@@ -179,11 +167,7 @@ export class FormationLoader {
     return resolveMonitor(ref, monitors);
   }
 
-  resolvePosition(
-    position: Position,
-    monitor: MonitorInfo,
-    gridConfig?: GridConfig,
-  ): Rect {
+  resolvePosition(position: Position, monitor: MonitorInfo, gridConfig?: GridConfig): Rect {
     return resolvePosition(position, monitor, gridConfig);
   }
 }

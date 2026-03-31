@@ -37,4 +37,11 @@ export function createPlatform(): PlatformAPI {
   };
 }
 
-export type { PlatformAPI, MonitorInfo, Rect, SpawnOpts, SpawnedProcess, ProcessInfo } from './types.js';
+export type {
+  PlatformAPI,
+  MonitorInfo,
+  Rect,
+  SpawnOpts,
+  SpawnedProcess,
+  ProcessInfo,
+} from './types.js';
