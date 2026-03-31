@@ -334,7 +334,9 @@
 
   <!-- hero -->
   <div class="hero">
-    <div style="width:80px;height:80px;margin-bottom:24px" id="logoPlaceholder"></div>
+    <div style="width:80px;height:80px;margin-bottom:24px;position:relative" id="logoPlaceholder">
+      <noscript><img src="sworm-icon.png" width="80" height="80" alt="sworm"></noscript>
+    </div>
     <div class="hero-wordmark">sworm</div>
     <div class="hero-tagline">spatial agent orchestration</div>
   </div>
@@ -613,13 +615,19 @@
         smoothHeadAngle += diff * 0.1;
       }
 
-      // Follow chain — when coiled (awakeness=0), segments spiral around center
+      // Follow chain — when coiled (awakeness=0), form triskele shape
       for (let i = 1; i < SEG; i++) {
-        // Coiled position: spiral around hero center
-        const coilAngle = time * 0.3 + (i / SEG) * Math.PI * 4;
-        const coilRadius = (i / SEG) * 30;
-        const coilX = hero.x + Math.cos(coilAngle) * coilRadius;
-        const coilY = hero.y + Math.sin(coilAngle) * coilRadius;
+        // Triskele position: 3 arms spiraling from center
+        // Each arm spans ~16 segments, curves outward ~210 degrees
+        const t = i / SEG;
+        // Spiral: radius grows from 0 to 35px, angle sweeps ~3.5 radians (200deg)
+        const spiralRadius = t * 35;
+        // 3 arms = offset by 2PI/3, continuous spiral
+        const spiralAngle = t * 3.5 + (Math.floor(i * 3 / SEG) * Math.PI * 2 / 3);
+        // Slow rotation for life
+        const rot = time * 0.2;
+        const coilX = hero.x + Math.cos(spiralAngle + rot) * spiralRadius;
+        const coilY = hero.y + Math.sin(spiralAngle + rot) * spiralRadius;
 
         // Chain-follow position (normal worm behavior)
         const prev = segments[i-1];
@@ -634,7 +642,7 @@
           chainY = prev.y - dy * ratio;
         }
 
-        // Blend between coiled and chain-following based on awakeness
+        // Blend between triskele and chain-following based on awakeness
         segments[i].x = coilX + (chainX - coilX) * awakeSmooth;
         segments[i].y = coilY + (chainY - coilY) * awakeSmooth;
       }
