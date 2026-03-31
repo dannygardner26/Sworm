@@ -17,6 +17,7 @@ import { listCommand } from './commands/list.js';
 import { statusCommand } from './commands/status.js';
 import { monitorsCommand } from './commands/monitors.js';
 import { voiceCommand } from './commands/voice.js';
+import { runCommand } from './commands/run.js';
 
 import type { PlatformAPI } from '../platform/types.js';
 
@@ -98,5 +99,53 @@ listCommand(program);
 statusCommand(program, getSwarm);
 monitorsCommand(program, getPlatform);
 voiceCommand(program, getSwarm);
+runCommand(program, getSwarm);
 
-program.parse();
+// Default action when no command is given: show status + available formations
+if (process.argv.length <= 2) {
+  import('chalk').then(({ default: chalk }) => {
+    import('../config/loader.js').then(({ listFormations, loadFormation }) => {
+      console.log(chalk.bold(`\n  SWORM v0.2.0`) + chalk.dim('  — spatially-aware desktop orchestration\n'));
+
+      // Show active worms if any
+      const swarm = getSwarm();
+      const worms = swarm.status();
+      if (worms.length > 0) {
+        console.log(chalk.bold('  Active worms:'));
+        for (const w of worms) {
+          const status = w.status === 'running' || w.status === 'positioned'
+            ? chalk.green(w.status) : chalk.yellow(w.status);
+          console.log(`    [${w.number ?? '-'}] ${w.id} ${chalk.dim(w.type)} ${status}`);
+        }
+        console.log();
+      }
+
+      // Show formations
+      try {
+        const formations = listFormations();
+        if (formations.length > 0) {
+          console.log(chalk.bold('  Formations:'));
+          for (const name of formations) {
+            try {
+              const config = loadFormation(name);
+              const desc = config.description ? chalk.dim(` — ${config.description}`) : '';
+              console.log(`    ${chalk.cyan(name)}${desc}`);
+            } catch {
+              console.log(`    ${chalk.cyan(name)}`);
+            }
+          }
+          console.log();
+        }
+      } catch {}
+
+      console.log(chalk.dim('  Quick start:'));
+      console.log(chalk.dim('    sworm deploy pilot     Deploy a formation'));
+      console.log(chalk.dim('    sworm run claude       Quick-launch Claude Code'));
+      console.log(chalk.dim('    sworm run shell        Quick-launch a terminal'));
+      console.log(chalk.dim('    sworm list             List formations with details'));
+      console.log(chalk.dim('    sworm --help           All commands\n'));
+    });
+  });
+} else {
+  program.parse();
+}

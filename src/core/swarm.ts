@@ -1,5 +1,6 @@
 import type { PlatformAPI } from '../platform/types.js';
 import type { Worm, WormStatusInfo } from './worm.js';
+import type { FormationConfig } from '../config/schema.js';
 import { WormTypeRegistry } from './registry.js';
 import { SwormEventBus } from './events.js';
 import { FormationLoader, resolveMonitor, resolvePosition } from './formation.js';
@@ -47,6 +48,19 @@ export class Swarm {
       throw error;
     }
 
+    await this.deployConfig(config, opts);
+  }
+
+  async deployConfig(
+    config: FormationConfig,
+    opts?: { force?: boolean },
+  ): Promise<void> {
+    // If force, kill existing worms first
+    if (opts?.force && this.activeWorms.size > 0) {
+      await this.kill();
+    }
+
+    const formationName = config.name;
     const monitors = await this.platform.monitors.getAll();
 
     // Deploy worms sequentially so each can accurately detect its new window

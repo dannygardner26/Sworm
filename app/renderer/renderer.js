@@ -16,6 +16,7 @@ const state = {
   focusedPane: null,
   paneCounter: 0,
   commandPaletteOpen: false,
+  voiceShortcut: null,
 };
 
 // ─── Welcome Screen ──────────────────────────────────────
@@ -38,8 +39,11 @@ function showWelcome() {
         <button class="action-btn" onclick="createWidgetPane({name:'dashboard',widget:'dashboard'})">
           <span class="icon">#</span> Dashboard
         </button>
+        <button class="action-btn" onclick="createWidgetPane({name:'settings',widget:'settings'})">
+          <span class="icon">*</span> Settings
+        </button>
       </div>
-      <div class="hint">Ctrl+Space for command palette | Ctrl+N new agent</div>
+      <div class="hint">Ctrl+Space command palette | Ctrl+N new agent</div>
     </div>
   `;
 }
@@ -298,7 +302,7 @@ window.sworm.pty.onExit((id, exitCode) => {
 });
 
 // ─── Widget Message Bridge ────────────────────────────────
-window.addEventListener('message', (e) => {
+window.addEventListener('message', async (e) => {
   if (!e.data || !e.data.type) return;
   console.log('[Sworm] Widget message:', e.data);
   switch (e.data.type) {
@@ -311,6 +315,30 @@ window.addEventListener('message', (e) => {
     case 'new-agent':
       createPane({ name: e.data.name, cmd: e.data.cmd || 'claude' });
       break;
+    case 'settings-request': {
+      // Settings widget requesting current settings
+      const settings = await window.sworm.settings.read();
+      // Find the settings iframe and send data back
+      for (const [, pane] of state.panes) {
+        if (pane.type === 'widget' && pane.widget === 'settings' && pane.iframe) {
+          pane.iframe.contentWindow.postMessage({ type: 'settings-data', settings }, '*');
+        }
+      }
+      break;
+    }
+    case 'settings-save': {
+      // Settings widget saving settings
+      const result = await window.sworm.settings.write(e.data.settings);
+      for (const [, pane] of state.panes) {
+        if (pane.type === 'widget' && pane.widget === 'settings' && pane.iframe) {
+          pane.iframe.contentWindow.postMessage({
+            type: result.ok ? 'settings-saved' : 'settings-error',
+            error: result.error,
+          }, '*');
+        }
+      }
+      break;
+    }
   }
 });
 
@@ -319,6 +347,65 @@ function handleCommand(cmd) {
   else if (cmd === 'new shell') createPane({ name: 'shell', cmd: '' });
   else if (cmd === 'new launcher') createWidgetPane({ name: 'launcher', widget: 'launcher' });
   else if (cmd === 'kill all') { for (const id of [...state.panes.keys()]) killPane(id); }
+}
+
+function executeVoiceCommand(text) {
+  const t = text.toLowerCase().trim();
+  console.log('[Voice] Executing:', t);
+
+  // New windows/panes
+  if (t.match(/\b(open|new|create|start|launch)\b.*\b(agent|claude)\b/i)) {
+    const count = t.match(/(\d+|two|three|four|five)/i);
+    const n = count ? parseWordNumber(count[1]) : 1;
+    for (let i = 0; i < n; i++) createPane();
+    return;
+  }
+  if (t.match(/\b(open|new|create|start|launch)\b.*\b(shell|terminal)\b/i)) {
+    const count = t.match(/(\d+|two|three|four|five)/i);
+    const n = count ? parseWordNumber(count[1]) : 1;
+    for (let i = 0; i < n; i++) createPane({ name: 'shell', cmd: '' });
+    return;
+  }
+  if (t.match(/\b(open|new|create)\b.*\b(window|pane)\b/i)) {
+    const count = t.match(/(\d+|two|three|four|five)/i);
+    const n = count ? parseWordNumber(count[1]) : 1;
+    for (let i = 0; i < n; i++) createPane();
+    return;
+  }
+  if (t.match(/\b(open|show)\b.*\bsetting/i)) {
+    createWidgetPane({ name: 'settings', widget: 'settings' });
+    return;
+  }
+  if (t.match(/\b(open|show)\b.*\b(launcher|dashboard)\b/i)) {
+    const widget = t.match(/launcher/i) ? 'launcher' : 'dashboard';
+    createWidgetPane({ name: widget, widget });
+    return;
+  }
+
+  // Kill/close
+  if (t.match(/\b(kill|close|remove)\b.*\ball\b/i)) {
+    for (const id of [...state.panes.keys()]) killPane(id);
+    return;
+  }
+  if (t.match(/\b(kill|close|remove)\b.*\b(this|current|focused)\b/i)) {
+    if (state.focusedPane) killPane(state.focusedPane);
+    return;
+  }
+
+  // Focus
+  if (t.match(/\bfocus\b.*(\d+)/i)) {
+    const m = t.match(/(\d+)/);
+    if (m) focusByNumber(parseInt(m[1]));
+    return;
+  }
+
+  // Fallback — just log it
+  console.log('[Voice] Unrecognized command:', t);
+}
+
+function parseWordNumber(w) {
+  const map = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+  return map[w.toLowerCase()] || parseInt(w) || 1;
 }
 
 // ─── Status Bar ───────────────────────────────────────────
@@ -334,7 +421,7 @@ function updateStatusBar() {
       ${focused ? `<span>[${focused.number}] ${focused.name}</span>` : ''}
     </div>
     <div class="right">
-      <span class="shortcut-hint">Ctrl+N agent | Ctrl+Space palette | Ctrl+1-9 focus</span>
+      <span class="shortcut-hint">${state.voiceShortcut ? state.voiceShortcut + ' voice | ' : ''}Ctrl+N agent | Ctrl+Space palette</span>
     </div>
   `;
 }
@@ -345,6 +432,7 @@ const COMMANDS = [
   { label: 'New Shell', desc: 'Plain terminal', fn: () => createPane({ name: 'shell', cmd: '' }) },
   { label: 'Launcher', desc: 'App launcher widget', fn: () => createWidgetPane({ name: 'launcher', widget: 'launcher' }) },
   { label: 'Dashboard', desc: 'Agent dashboard widget', fn: () => createWidgetPane({ name: 'dashboard', widget: 'dashboard' }) },
+  { label: 'Settings', desc: 'Voice, hotkeys, and general settings', fn: () => createWidgetPane({ name: 'settings', widget: 'settings' }) },
   { label: 'Kill All', desc: 'Close all panes', fn: () => { for (const id of [...state.panes.keys()]) killPane(id); } },
 ];
 
@@ -422,12 +510,75 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ─── Voice Indicator ─────────────────────────────────────
+function initVoice() {
+  const overlay = document.createElement('div');
+  overlay.id = 'voice-overlay';
+  overlay.className = 'voice-overlay hidden';
+  overlay.innerHTML = '<div class="voice-dot"></div><span class="voice-label">Listening...</span>';
+  document.body.appendChild(overlay);
+
+  window.sworm.voice.onStatus((status, message) => {
+    console.log('[Voice]', status, message);
+    const el = document.getElementById('voice-overlay');
+    if (!el) return;
+    const dot = el.querySelector('.voice-dot');
+    const label = el.querySelector('.voice-label');
+
+    switch (status) {
+      case 'listening':
+        el.classList.remove('hidden');
+        label.textContent = 'Listening...';
+        dot.className = 'voice-dot recording';
+        break;
+      case 'processing':
+        el.classList.remove('hidden');
+        label.textContent = 'Processing...';
+        dot.className = 'voice-dot processing';
+        break;
+      case 'error':
+        el.classList.remove('hidden');
+        label.textContent = message || 'Error';
+        dot.className = 'voice-dot error';
+        setTimeout(() => el.classList.add('hidden'), 3000);
+        break;
+      case 'idle':
+        el.classList.add('hidden');
+        break;
+    }
+  });
+
+  window.sworm.voice.onResult((text) => {
+    console.log('[Voice] Result:', text);
+    const el = document.getElementById('voice-overlay');
+    if (el) {
+      el.classList.remove('hidden');
+      el.querySelector('.voice-label').textContent = '"' + text + '"';
+      el.querySelector('.voice-dot').className = 'voice-dot success';
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+    // Execute the voice command
+    executeVoiceCommand(text);
+  });
+
+  window.sworm.voice.onShortcut((shortcut) => {
+    state.voiceShortcut = shortcut;
+    updateStatusBar();
+    // Update welcome hint if visible
+    const hint = document.querySelector('#welcome .hint');
+    if (hint) hint.textContent = `${shortcut} voice | Ctrl+Space palette | Ctrl+N new agent`;
+  });
+}
+
 // ─── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Set up command palette HTML
   const palette = document.getElementById('command-palette');
   palette.innerHTML = '<input type="text" placeholder="Type a command..." spellcheck="false" autocomplete="off"><div class="results"></div>';
   palette.querySelector('input').addEventListener('input', (e) => renderPaletteResults(e.target.value));
+
+  // Init voice indicator
+  initVoice();
 
   // Show welcome screen
   updateStatusBar();

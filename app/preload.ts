@@ -20,6 +20,17 @@ export interface SwormAPI {
   app: {
     launch(opts: { exe: string; args?: string[] }): Promise<{ ok: boolean; error?: string }>;
   };
+  settings: {
+    read(): Promise<any>;
+    write(settings: any): Promise<{ ok: boolean; error?: string }>;
+  };
+  voice: {
+    start(): void;
+    stop(): void;
+    onStatus(callback: (status: string, message: string) => void): void;
+    onResult(callback: (text: string) => void): void;
+    onShortcut(callback: (shortcut: string) => void): void;
+  };
 }
 
 contextBridge.exposeInMainWorld('sworm', {
@@ -41,5 +52,22 @@ contextBridge.exposeInMainWorld('sworm', {
   },
   app: {
     launch: (opts: any) => ipcRenderer.invoke('app:launch', opts),
+  },
+  settings: {
+    read: () => ipcRenderer.invoke('settings:read'),
+    write: (settings: any) => ipcRenderer.invoke('settings:write', settings),
+  },
+  voice: {
+    start: () => ipcRenderer.send('voice:start'),
+    stop: () => ipcRenderer.send('voice:stop'),
+    onStatus: (callback: (status: string, message: string) => void) => {
+      ipcRenderer.on('voice:status', (_event, status, message) => callback(status, message));
+    },
+    onResult: (callback: (text: string) => void) => {
+      ipcRenderer.on('voice:result', (_event, text) => callback(text));
+    },
+    onShortcut: (callback: (shortcut: string) => void) => {
+      ipcRenderer.on('voice:shortcut', (_event, shortcut) => callback(shortcut));
+    },
   },
 } satisfies SwormAPI);

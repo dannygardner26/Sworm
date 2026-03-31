@@ -19,12 +19,12 @@ const PATTERNS: CommandPattern[] = [
   { pattern: /(?:show\s+)?status/i, action: 'status' },
   { pattern: /focus\s+(?:on\s+)?(\w+)/i, action: 'focus', extract: (m) => ({ target: m[1] }) },
   { pattern: /(?:list|what)\s+formations?/i, action: 'list' },
-  // Numbered agent focus — must be AFTER more specific patterns
-  { pattern: /(?:agent\s+)?(\d+)$/i, action: 'focus-number', extract: (m) => ({ target: m[1] }) },
-  // Layout commands
+  // Layout commands — must be BEFORE numbered agent focus (which is a catch-all)
   { pattern: /expand\s+(?:agent\s+)?(\d+)/i, action: 'expand', extract: (m) => ({ target: m[1] }) },
   { pattern: /shrink\s+(?:agent\s+)?(\d+)/i, action: 'shrink', extract: (m) => ({ target: m[1] }) },
   { pattern: /(?:full\s*screen|maximize)\s+(?:agent\s+)?(\d+)/i, action: 'fullscreen', extract: (m) => ({ target: m[1] }) },
+  // Numbered agent focus — must be LAST among digit-matching patterns
+  { pattern: /(?:agent\s+)?(\d+)$/i, action: 'focus-number', extract: (m) => ({ target: m[1] }) },
   { pattern: /minimize\s+all/i, action: 'minimize-all' },
   // Show/hide toggle
   { pattern: /(?:show|hide|toggle)\s+(?:all\s+)?(?:worms?|agents?)/i, action: 'toggle-visibility' },

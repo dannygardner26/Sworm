@@ -14,12 +14,28 @@ export function deployCommand(
   getPlatform: () => PlatformAPI,
 ): void {
   program
-    .command('deploy <formation>')
-    .description('Deploy a named formation')
+    .command('deploy [formation]')
+    .description('Deploy a named formation (omit name to see choices)')
     .option('--force', 'Kill existing worms before deploying')
     .option('--dry-run', 'Show what would happen without doing it')
-    .action(async (formation: string, opts: { force?: boolean; dryRun?: boolean }) => {
+    .action(async (formation: string | undefined, opts: { force?: boolean; dryRun?: boolean }) => {
       try {
+        // If no formation given, list available ones and exit with a hint
+        if (!formation) {
+          const { listFormations } = await import('../../config/loader.js');
+          const formations = listFormations();
+          if (formations.length === 0) {
+            printError('No formations found. Create a YAML file in formations/');
+            process.exit(1);
+          }
+          console.log(chalk.bold('\nAvailable formations:\n'));
+          for (const name of formations) {
+            console.log(`  ${chalk.cyan(name)}`);
+          }
+          console.log(chalk.dim(`\nUsage: sworm deploy <name>\n`));
+          return;
+        }
+
         if (opts.dryRun) {
           await dryRun(formation, getPlatform());
           return;

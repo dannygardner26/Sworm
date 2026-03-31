@@ -1,44 +1,63 @@
-# Sworm
+<div align="center">
+  <img src="logos/sworm-icon.png" width="80" alt="sworm">
+  <h1>sworm</h1>
+  <p><em>spatial agent orchestration</em></p>
+  <p>
+    <img src="https://img.shields.io/badge/license-MIT-white?style=flat-square" alt="MIT License">
+    <img src="https://img.shields.io/badge/platform-Windows%2011-white?style=flat-square" alt="Windows 11">
+    <img src="https://img.shields.io/badge/node-%3E%3D20-white?style=flat-square" alt="Node >= 20">
+  </p>
+</div>
 
-**Spatially-aware desktop orchestration** — deploy AI agents and applications across multi-monitor setups via named formations.
+---
 
-Sworm = **Swarm** (collective orchestrator) + **Worm** (autonomous window agents)
+Deploy AI agents and apps across multi-monitor setups via named formations.
 
-## What It Does
-
-Instead of manually arranging windows every time you switch contexts, you define **formations** — named layouts that specify which apps to open and where to place them. Then deploy with a single command or voice trigger.
+## Get Started
 
 ```bash
-sworm deploy pilot
+git clone https://github.com/dannygardner26/Sworm.git
+cd Sworm
+npm install
+npm run build
 ```
-
-Instantly spawns Claude Code, your IDE, and a browser — each precisely positioned across your monitors.
 
 ## Quick Start
 
 ```bash
-npm install -g sworm
-
-# See your monitors
-sworm monitors
-
-# List available formations
-sworm list
-
-# Deploy a formation
-sworm deploy pilot
-
-# Kill all running worms
-sworm kill
+sworm deploy pilot    # deploy a formation
+sworm list            # see available formations
+sworm kill            # tear down everything
 ```
 
-## Formations
+## What is Sworm?
 
-Formations are YAML files in the `formations/` directory:
+Every context switch costs you time. You close tabs, reopen terminals, drag windows across monitors, and manually reconstruct whatever layout you had before. Multiply that by the number of times per day you shift between coding, reviewing, debugging, or demoing, and the overhead adds up fast. The problem gets worse with multi-monitor setups where precise window placement matters.
+
+Sworm solves this with declarative YAML formations. You describe which apps, terminals, and AI agents to launch and where they go across your screens, then deploy the entire layout with a single command or voice trigger. The name comes from **swarm** (collective orchestration) + **worm** (autonomous window agents) = **sworm**. Each window is a "worm" that knows how to spawn, position, and manage itself, while the swarm coordinates the whole formation.
+
+## Features
+
+- **Spatial formations** — define multi-monitor layouts in YAML, deploy with one command
+- **AI agents** — multi-provider LLM runtime with tool use (Anthropic, OpenAI, Gemini, Bedrock, Ollama)
+- **Voice control** — Whisper-powered speech commands for hands-free operation
+- **Global hotkeys** — Win32 keyboard shortcuts for instant formation switching
+- **Electron app** — rich desktop UI with terminal panes and widget system
+- **Wallpaper mode** — render agent windows as desktop wallpaper
+- **Git worktrees** — auto-create isolated branches for parallel work
+
+## Formation Example
+
+Formations are YAML files that declare which worms to spawn and where to place them. Here is `formations/pilot.yaml`, a basic dev layout with Claude Code on the left and VS Code on the right:
 
 ```yaml
+# Pilot Formation — Primary development layout
+# Claude Code on the left, IDE on the right
+# Works on single or multi-monitor setups
+
 name: pilot
-description: "Primary dev formation"
+description: "Primary dev formation — Claude + IDE"
+
 worms:
   - id: claude-main
     type: claude
@@ -56,77 +75,33 @@ worms:
       zone: right-half
     params:
       folder: "."
-
-  - id: browser
-    type: app
-    monitor: right
-    position:
-      zone: full
-    params:
-      app: chrome
-      url: http://localhost:3000
 ```
 
 ## Worm Types
 
-| Type | Description |
-|------|-------------|
-| `claude` | Claude Code in a terminal (supports git worktrees) |
-| `ide` | VS Code with folder/files/workspace |
-| `generic` | Any executable |
-| `app` | Browser with URL/profile support |
+| Type | Description | Key Params |
+|------|-------------|------------|
+| `claude` | Claude Code in Windows Terminal | `repo`, `shell`, `worktree` |
+| `ide` | VS Code | `folder`, `workspace` |
+| `app` | Browser (Chrome, Edge, Firefox) | `url`, `browser`, `profile` |
+| `generic` | Any executable | `command`, `args` |
+| `ai-agent` | LLM agent with tool use | `provider`, `model`, `task` |
 
-## Positioning
-
-Three modes for placing windows:
-
-**Zones** (simplest): `full`, `left-half`, `right-half`, `top-left`, `top-right`, `bottom-left`, `bottom-right`, `left-third`, `center-third`, `right-third`
-
-**Grid**: Precise column/row placement within a configurable grid.
-
-**Absolute**: Pixel coordinates or percentage-based positioning.
-
-## Voice Commands
-
-Start the voice listener:
+## Development
 
 ```bash
-sworm voice
+git clone https://github.com/dannygardner26/Sworm.git
+cd Sworm
+npm install
+npm run build
+npm test
+npm run lint
 ```
 
-Or send commands via the dictation bridge HTTP API:
+## Contributing
 
-```bash
-curl -X POST http://localhost:7483/command -d '{"text": "deploy pilot formation"}'
-```
-
-Supported voice commands:
-- "Deploy [formation]" / "Switch to [formation]"
-- "Kill all" / "Kill [target]"
-- "Status"
-- "Focus [worm]"
-- "List formations"
-
-## Architecture
-
-```
-Swarm (orchestrator)
-├── Formation Loader (YAML → validated config)
-├── Monitor Detector (Win32 API → screen geometry)
-├── Worm Registry (plugin system)
-└── Event Bus (lifecycle events)
-    ├── ClaudeWorm → Windows Terminal + Claude Code
-    ├── IDEWorm → VS Code
-    ├── AppWorm → Chrome / Edge / Firefox
-    └── GenericWorm → Any executable
-```
-
-## Requirements
-
-- Windows 11 (uses Win32 APIs via koffi)
-- Node.js >= 20
-- For voice: microphone access or external dictation tool
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT
+[MIT](LICENSE)

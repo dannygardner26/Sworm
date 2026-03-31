@@ -25,5 +25,22 @@ electron_1.contextBridge.exposeInMainWorld('sworm', {
     app: {
         launch: (opts) => electron_1.ipcRenderer.invoke('app:launch', opts),
     },
+    settings: {
+        read: () => electron_1.ipcRenderer.invoke('settings:read'),
+        write: (settings) => electron_1.ipcRenderer.invoke('settings:write', settings),
+    },
+    voice: {
+        start: () => electron_1.ipcRenderer.send('voice:start'),
+        stop: () => electron_1.ipcRenderer.send('voice:stop'),
+        onStatus: (callback) => {
+            electron_1.ipcRenderer.on('voice:status', (_event, status, message) => callback(status, message));
+        },
+        onResult: (callback) => {
+            electron_1.ipcRenderer.on('voice:result', (_event, text) => callback(text));
+        },
+        onShortcut: (callback) => {
+            electron_1.ipcRenderer.on('voice:shortcut', (_event, shortcut) => callback(shortcut));
+        },
+    },
 });
 //# sourceMappingURL=preload.js.map

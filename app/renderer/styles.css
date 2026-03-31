@@ -8,12 +8,21 @@ html, body, #app {
   overflow: hidden;
 }
 
+/* ─── Titlebar Drag Region ────────────────────── */
+#app { padding-top: 32px; }
+#titlebar-drag {
+  position: fixed; top: 0; left: 0; right: 140px;
+  height: 32px;
+  -webkit-app-region: drag;
+  z-index: 3000;
+}
+
 /* ─── Pane Container ──────────────────────────── */
 #pane-container {
   display: flex;
   flex-wrap: wrap;
-  width: 100vw;
-  height: calc(100vh - 28px);
+  width: 100%;
+  height: calc(100vh - 32px - 28px);
   gap: 2px;
   background: #111;
 }
@@ -71,7 +80,8 @@ html, body, #app {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: calc(100vh - 28px);
+  width: 100%;
+  height: 100%;
   gap: 24px;
 }
 
@@ -187,4 +197,60 @@ html, body, #app {
 #command-palette .section-header {
   padding: 6px 16px; color: #555;
   font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* ─── Voice Overlay ──────────────────────────── */
+.voice-overlay {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #1e1e1e;
+  border: 1px solid #4fc3f7;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(79, 195, 247, 0.3);
+  z-index: 2000;
+  animation: voiceSlideIn 0.2s ease-out;
+}
+
+.voice-overlay.hidden { display: none; }
+
+@keyframes voiceSlideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.voice-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+}
+
+.voice-dot.recording {
+  background: #f44336;
+  animation: voicePulse 1s infinite;
+}
+
+.voice-dot.processing {
+  background: #ff9800;
+  animation: voicePulse 0.5s infinite;
+}
+
+.voice-dot.success { background: #4caf50; }
+.voice-dot.error { background: #f44336; }
+
+@keyframes voicePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(244, 67, 54, 0); }
+}
+
+.voice-label {
+  color: #e0e0e0;
+  font-size: 13px;
+  white-space: nowrap;
 }

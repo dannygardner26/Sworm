@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { listFormations } from '../../config/loader.js';
+import { listFormations, loadFormation } from '../../config/loader.js';
 import { printFormationList, printError } from '../output.js';
 
 export function listCommand(program: Command): void {
@@ -9,7 +9,19 @@ export function listCommand(program: Command): void {
     .action(() => {
       try {
         const formations = listFormations();
-        printFormationList(formations);
+        const details = new Map<string, { description?: string; wormCount: number }>();
+        for (const name of formations) {
+          try {
+            const config = loadFormation(name);
+            details.set(name, {
+              description: config.description,
+              wormCount: config.worms.length,
+            });
+          } catch {
+            // If a formation fails to parse, still list it without details
+          }
+        }
+        printFormationList(formations, details);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         printError(msg);

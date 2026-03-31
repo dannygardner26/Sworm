@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a; color: #e0e0e0;
+  font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
+  padding: 20px; height: 100vh;
+  overflow-y: auto;
+}
+
+h2 {
+  font-size: 14px; color: #4fc3f7; font-weight: 400;
+  text-transform: uppercase; letter-spacing: 2px;
+  margin-bottom: 16px; padding-bottom: 8px;
+  border-bottom: 1px solid #222;
+}
+
+.section { margin-bottom: 28px; }
+
+.field {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid #1a1a1a;
+}
+.field:last-child { border-bottom: none; }
+
+.field-left { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.field-label { font-size: 13px; color: #ccc; }
+.field-desc { font-size: 11px; color: #555; }
+
+.field-right { display: flex; align-items: center; gap: 8px; }
+
+/* Toggle switch */
+.toggle {
+  position: relative; width: 40px; height: 22px;
+  background: #333; border-radius: 11px; cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle.on { background: #1e6f9f; }
+.toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; background: #888;
+  border-radius: 50%; transition: all 0.2s;
+}
+.toggle.on::after { left: 21px; background: #4fc3f7; }
+
+/* Text input */
+input[type="text"], input[type="number"], select {
+  background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
+  color: #e0e0e0; padding: 6px 10px; font-family: inherit;
+  font-size: 12px; outline: none; min-width: 180px;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus { border-color: #4fc3f7; }
+select { cursor: pointer; }
+
+/* Hotkey input */
+.hotkey-input {
+  background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
+  color: #4fc3f7; padding: 6px 12px; font-family: inherit;
+  font-size: 12px; cursor: pointer; min-width: 160px;
+  text-align: center; user-select: none;
+  transition: all 0.2s;
+}
+.hotkey-input:hover { border-color: #4fc3f7; }
+.hotkey-input.recording { border-color: #ff9800; color: #ff9800; animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px; background: #1a1a1a; border: 1px solid #333;
+  border-radius: 6px; color: #e0e0e0; cursor: pointer;
+  font-family: inherit; font-size: 12px; transition: all 0.15s;
+}
+.btn:hover { background: #1e3a5f; border-color: #4fc3f7; color: #4fc3f7; }
+.btn-primary { background: #1e3a5f; border-color: #4fc3f7; color: #4fc3f7; }
+.btn-danger { border-color: #f44336; color: #f44336; }
+.btn-danger:hover { background: #3a1a1a; }
+
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+
+/* Status badge */
+.badge {
+  padding: 2px 8px; border-radius: 10px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.badge-ok { background: #1a3a1a; color: #4caf50; }
+.badge-warn { background: #3a3a1a; color: #ff9800; }
+.badge-err { background: #3a1a1a; color: #f44336; }
+
+/* Path display */
+.path { font-size: 11px; color: #555; word-break: break-all; }
+
+.save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 10px 20px; background: #1a1a1a;
+  border-top: 1px solid #333;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.save-bar.hidden { display: none; }
+.save-msg { font-size: 12px; color: #4caf50; }
+</style>
+</head>
+<body>
+  <div id="settings"></div>
+  <div id="save-bar" class="save-bar hidden">
+    <span id="save-msg" class="save-msg"></span>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="revert()">Revert</button>
+      <button class="btn btn-primary" onclick="save()">Save</button>
+    </div>
+  </div>
+
+<script>
+let settings = null;
+let originalSettings = null;
+let dirty = false;
+
+// Load settings from parent Electron app
+function init() {
+  window.parent.postMessage({ type: 'settings-request' }, '*');
+}
+
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'settings-data') {
+    settings = e.data.settings;
+    originalSettings = JSON.parse(JSON.stringify(settings));
+    render();
+  }
+  if (e.data?.type === 'settings-saved') {
+    originalSettings = JSON.parse(JSON.stringify(settings));
+    dirty = false;
+    updateSaveBar('Saved!');
+    setTimeout(() => updateSaveBar(''), 2000);
+  }
+});
+
+function markDirty() {
+  dirty = true;
+  updateSaveBar('Unsaved changes');
+}
+
+function updateSaveBar(msg) {
+  const bar = document.getElementById('save-bar');
+  const msgEl = document.getElementById('save-msg');
+  bar.classList.toggle('hidden', !dirty && !msg);
+  msgEl.textContent = msg;
+}
+
+function save() {
+  window.parent.postMessage({ type: 'settings-save', settings }, '*');
+}
+
+function revert() {
+  settings = JSON.parse(JSON.stringify(originalSettings));
+  dirty = false;
+  updateSaveBar('');
+  render();
+}
+
+function toggle(path) {
+  const parts = path.split('.');
+  let obj = settings;
+  for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+  obj[parts[parts.length - 1]] = !obj[parts[parts.length - 1]];
+  markDirty();
+  render();
+}
+
+function setVal(path, value) {
+  const parts = path.split('.');
+  let obj = settings;
+  for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+  obj[parts[parts.length - 1]] = value;
+  markDirty();
+}
+
+function getVal(path) {
+  const parts = path.split('.');
+  let obj = settings;
+  for (const p of parts) obj = obj?.[p];
+  return obj;
+}
+
+function render() {
+  if (!settings) return;
+  const el = document.getElementById('settings');
+  el.innerHTML = `
+    ${renderVoice()}
+    ${renderHotkeys()}
+    ${renderGeneral()}
+  `;
+  // Pad bottom for save bar
+  el.style.paddingBottom = '60px';
+}
+
+function renderVoice() {
+  const v = settings.voice;
+  return `
+    <div class="section">
+      <h2>Voice Activation</h2>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Enable Voice</span>
+          <span class="field-desc">Master switch for all voice features</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${v.enabled ? 'on' : ''}" onclick="toggle('voice.enabled')"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Push-to-Talk</span>
+          <span class="field-desc">Hold hotkey to record a voice command</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${v.pushToTalk.enabled ? 'on' : ''}" onclick="toggle('voice.pushToTalk.enabled')"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Push-to-Talk Hotkey</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${v.pushToTalk.hotkey}" style="min-width:140px;text-align:center"
+            onchange="setVal('voice.pushToTalk.hotkey', this.value)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Wake Word</span>
+          <span class="field-desc">Say "hey sworm" to activate hands-free</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${v.wakeWord.enabled ? 'on' : ''}" onclick="toggle('voice.wakeWord.enabled')"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Wake Phrase</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${v.wakeWord.phrase}"
+            onchange="setVal('voice.wakeWord.phrase', this.value)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Audio Recorder</span>
+          <span class="field-desc">Tool used to capture microphone input</span>
+        </div>
+        <div class="field-right">
+          <select onchange="setVal('voice.recorder', this.value)">
+            <option value="sox" ${v.recorder === 'sox' ? 'selected' : ''}>SoX</option>
+            <option value="ffmpeg" ${v.recorder === 'ffmpeg' ? 'selected' : ''}>FFmpeg</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Recording Timeout</span>
+          <span class="field-desc">Max recording duration in ms</span>
+        </div>
+        <div class="field-right">
+          <input type="number" value="${v.pttTimeout}" min="1000" max="15000" step="500"
+            style="min-width:100px"
+            onchange="setVal('voice.pttTimeout', parseInt(this.value))" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Chime on Listen</span>
+          <span class="field-desc">Play a sound when recording starts</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${v.feedback.chimeOnListen ? 'on' : ''}" onclick="toggle('voice.feedback.chimeOnListen')"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Chime on Acknowledge</span>
+          <span class="field-desc">Play a sound when command is recognized</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${v.feedback.chimeOnAcknowledge ? 'on' : ''}" onclick="toggle('voice.feedback.chimeOnAcknowledge')"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Whisper Binary</span>
+          <span class="path">${v.whisper.binaryPath || '(not configured)'}</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${v.whisper.binaryPath}" placeholder="path to whisper-cli"
+            onchange="setVal('voice.whisper.binaryPath', this.value)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Whisper Model</span>
+          <span class="path">${v.whisper.modelPath || '(not configured)'}</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${v.whisper.modelPath}" placeholder="path to .bin model"
+            onchange="setVal('voice.whisper.modelPath', this.value)" />
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHotkeys() {
+  const h = settings.hotkeys;
+  const rows = (h.bindings || []).map((b, i) => `
+    <div class="field">
+      <div class="field-left">
+        <span class="field-label">${b.action}</span>
+        ${b.args ? `<span class="field-desc">${JSON.stringify(b.args)}</span>` : ''}
+      </div>
+      <div class="field-right">
+        <input type="text" value="${b.key}" style="min-width:140px;text-align:center"
+          onchange="settings.hotkeys.bindings[${i}].key = this.value; markDirty()" />
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="section">
+      <h2>Hotkeys</h2>
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Enable Global Hotkeys</span>
+          <span class="field-desc">Win32 RegisterHotKey — works system-wide</span>
+        </div>
+        <div class="field-right">
+          <div class="toggle ${h.enabled ? 'on' : ''}" onclick="toggle('hotkeys.enabled')"></div>
+        </div>
+      </div>
+      ${rows}
+    </div>
+  `;
+}
+
+function renderGeneral() {
+  const g = settings.general;
+  return `
+    <div class="section">
+      <h2>General</h2>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Default Formation</span>
+          <span class="field-desc">Formation deployed by Ctrl+Shift+D</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${g.defaultFormation}"
+            onchange="setVal('general.defaultFormation', this.value)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Formations Directory</span>
+          <span class="field-desc">Custom path to formations folder</span>
+        </div>
+        <div class="field-right">
+          <input type="text" value="${g.formationsDir || ''}" placeholder="(default: ./formations)"
+            onchange="setVal('general.formationsDir', this.value || undefined)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-left">
+          <span class="field-label">Theme</span>
+        </div>
+        <div class="field-right">
+          <select onchange="setVal('general.theme', this.value)">
+            <option value="dark" ${g.theme === 'dark' ? 'selected' : ''}>Dark</option>
+            <option value="light" ${g.theme === 'light' ? 'selected' : ''}>Light</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -115,7 +115,6 @@ export class WhisperListener implements VoiceListener {
         '-f', wavPath,
         '-l', this.options.language,
         '--no-timestamps',
-        '-nt',  // no timestamps in output
       ]);
 
       let output = '';
