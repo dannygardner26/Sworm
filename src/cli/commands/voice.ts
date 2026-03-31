@@ -239,11 +239,24 @@ export function voiceCommand(program: Command, getSwarm: () => Swarm): void {
       // Register push-to-talk hotkey
       const { HotkeyManager } = await import('../../hotkeys/index.js');
       const hkm = new HotkeyManager();
-      hkm.onAction((action) => {
-        if (action === 'voice-activate') {
-          va.startPTT();
+      // Handler signature: (action, args?) currently; will become (action, eventType, args?) after hotkey workstream merges
+      hkm.onAction(((action: string, eventTypeOrArgs?: unknown, args?: Record<string, unknown>) => {
+        // Support both old signature (action, args) and new signature (action, eventType, args)
+        const eventType = typeof eventTypeOrArgs === 'string' ? eventTypeOrArgs : undefined;
+        switch (action) {
+          case 'voice-ptt':
+            if (eventType === 'hold-start') va.startHoldRecording();
+            else if (eventType === 'hold-end') void va.stopHoldRecording();
+            break;
+          case 'voice-toggle':
+            va.toggleRecording();
+            break;
+          case 'voice-activate':
+            // Legacy PTT behavior
+            va.startPTT();
+            break;
         }
-      });
+      }) as Parameters<typeof hkm.onAction>[0]);
       hkm.start();
 
       if (opts.wake && settings.voice.wakeWord.enabled) {

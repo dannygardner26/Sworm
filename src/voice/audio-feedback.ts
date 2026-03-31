@@ -44,3 +44,23 @@ export function playReadyTick(): void {
     // Silently fail
   }
 }
+
+/** Two short ascending beeps — toggle recording ON */
+export function playToggleOnTone(): void {
+  try {
+    Beep(660, 80);
+    Beep(880, 80);
+  } catch {
+    // Silently fail
+  }
+}
+
+/** Two short descending beeps — toggle recording OFF */
+export function playToggleOffTone(): void {
+  try {
+    Beep(880, 80);
+    Beep(660, 80);
+  } catch {
+    // Silently fail
+  }
+}

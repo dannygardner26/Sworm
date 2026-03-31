@@ -14,6 +14,8 @@ const CONFIG_PATH = join(SWORM_DIR, 'config.yaml');
 const PushToTalkSchema = z.object({
   enabled: z.boolean().default(true),
   hotkey: z.string().default('ctrl+shift+space'),
+  mode: z.enum(['hold', 'toggle', 'silence']).default('hold'),
+  toggleHotkey: z.string().default('ctrl+tab+`'),
 });
 
 const WakeWordSchema = z.object({
@@ -34,7 +36,7 @@ const FeedbackSchema = z.object({
 
 export const VoiceSettingsSchema = z.object({
   enabled: z.boolean().default(false),
-  pushToTalk: PushToTalkSchema.default({ enabled: true, hotkey: 'ctrl+shift+space' }),
+  pushToTalk: PushToTalkSchema.default({ enabled: true, hotkey: 'ctrl+shift+space', mode: 'hold', toggleHotkey: 'ctrl+tab+`' }),
   wakeWord: WakeWordSchema.default({ enabled: false, phrase: 'sworm' }),
   whisper: WhisperSchema.default({ binaryPath: '', modelPath: '', sampleRate: 16000 }),
   recorder: z.enum(['sox', 'ffmpeg']).default('sox'),
@@ -65,7 +67,7 @@ export const GeneralSettingsSchema = z.object({
 export const SwormSettingsSchema = z.object({
   voice: VoiceSettingsSchema.default({
     enabled: false,
-    pushToTalk: { enabled: true, hotkey: 'ctrl+shift+space' },
+    pushToTalk: { enabled: true, hotkey: 'ctrl+shift+space', mode: 'hold' as const, toggleHotkey: 'ctrl+tab+`' },
     wakeWord: { enabled: false, phrase: 'sworm' },
     whisper: { binaryPath: '', modelPath: '', sampleRate: 16000 },
     recorder: 'sox' as const,

@@ -39,7 +39,7 @@ export interface VoiceActivationConfig {
   recorder?: 'sox' | 'ffmpeg';
 }
 
-type ActivationState = 'idle' | 'ptt-recording' | 'wake-listening' | 'wake-recording';
+type ActivationState = 'idle' | 'ptt-recording' | 'hold-recording' | 'toggle-recording' | 'wake-listening' | 'wake-recording';
 
 export class VoiceActivation {
   private config: Required<VoiceActivationConfig>;
@@ -49,6 +49,11 @@ export class VoiceActivation {
   private tempDir: string;
   private pttBuffer: Buffer = Buffer.alloc(0);
   private pttTimer: ReturnType<typeof setTimeout> | null = null;
+  private holdBuffer: Buffer = Buffer.alloc(0);
+  private holdCapture: AudioCapture | null = null;
+  private toggleBuffer: Buffer = Buffer.alloc(0);
+  private toggleCapture: AudioCapture | null = null;
+  private toggleTimer: ReturnType<typeof setTimeout> | null = null;
   private wakeCapture: AudioCapture | null = null;
   private wakeBuffer: Buffer = Buffer.alloc(0);
   private wakeActive = false;
@@ -167,6 +172,151 @@ export class VoiceActivation {
     if (this.config.wakeWordEnabled && this.wakeActive) {
       this.startWakeWordListener();
     }
+  }
+
+  // ─── Hold-to-Talk ──────────────────────────────────────
+
+  /** Start hold-to-talk recording. Records until stopHoldRecording() is called (key release). */
+  startHoldRecording(): void {
+    if (this.state !== 'idle' && this.state !== 'wake-listening') return;
+
+    // Pause wake listener if active
+    if (this.wakeActive) this.stopWakeWordListener();
+
+    this.state = 'hold-recording';
+    this.holdBuffer = Buffer.alloc(0);
+    showListeningOverlay('hold');
+    playListeningChime();
+
+    this.holdCapture = new AudioCapture({
+      sampleRate: this.config.sampleRate,
+      recorder: this.config.recorder,
+    });
+    const stream = this.holdCapture.start();
+
+    // No silence detection, no timeout — purely controlled by key hold duration
+    stream.on('data', (chunk: Buffer) => {
+      if (this.state !== 'hold-recording') return;
+      this.holdBuffer = Buffer.concat([this.holdBuffer, chunk]);
+    });
+  }
+
+  /** Stop hold-to-talk recording and transcribe. Called on key release. */
+  async stopHoldRecording(): Promise<void> {
+    if (this.state !== 'hold-recording') return;
+
+    this.holdCapture?.stop();
+    this.holdCapture = null;
+    hideListeningOverlay();
+
+    const audioData = this.holdBuffer;
+    this.holdBuffer = Buffer.alloc(0);
+    this.state = 'idle';
+
+    // Minimum ~500ms of audio (16000 Hz * 2 bytes * 0.5s = 16000 bytes)
+    if (audioData.length < 16000) {
+      playErrorTone();
+      if (this.config.wakeWordEnabled) this.startWakeWordListener();
+      return;
+    }
+
+    playAcknowledgeChime();
+
+    try {
+      const text = await this.transcribe(audioData);
+      if (text.trim()) this.processText(text.trim());
+    } catch {
+      playErrorTone();
+    }
+
+    if (this.config.wakeWordEnabled) this.startWakeWordListener();
+  }
+
+  // ─── Toggle Recording ─────────────────────────────────
+
+  /** Toggle recording on/off. First call starts, second call stops. */
+  toggleRecording(): void {
+    if (this.state === 'toggle-recording') {
+      void this.stopToggleRecording();
+      return;
+    }
+
+    if (this.state !== 'idle' && this.state !== 'wake-listening') return;
+
+    if (this.wakeActive) this.stopWakeWordListener();
+
+    this.state = 'toggle-recording';
+    this.toggleBuffer = Buffer.alloc(0);
+    showListeningOverlay('toggle');
+    playListeningChime();
+
+    this.toggleCapture = new AudioCapture({
+      sampleRate: this.config.sampleRate,
+      recorder: this.config.recorder,
+    });
+    const stream = this.toggleCapture.start();
+
+    let quietChunks = 0;
+
+    stream.on('data', (chunk: Buffer) => {
+      if (this.state !== 'toggle-recording') return;
+      this.toggleBuffer = Buffer.concat([this.toggleBuffer, chunk]);
+
+      // Silence detection as safety net (more lenient than PTT)
+      if (chunk.length >= 320) {
+        const rms = computeRMS(chunk);
+        if (rms < 200) {
+          quietChunks++;
+        } else {
+          quietChunks = 0;
+        }
+        // Auto-stop after extended silence (8 quiet chunks, more lenient than PTT's 3)
+        if (quietChunks >= 8 && this.toggleBuffer.length > this.config.sampleRate * 2) {
+          void this.stopToggleRecording();
+        }
+      }
+    });
+
+    // Safety timeout at 30 seconds
+    this.toggleTimer = setTimeout(() => {
+      if (this.state === 'toggle-recording') {
+        void this.stopToggleRecording();
+      }
+    }, 30000);
+  }
+
+  private async stopToggleRecording(): Promise<void> {
+    if (this.state !== 'toggle-recording') return;
+
+    if (this.toggleTimer) {
+      clearTimeout(this.toggleTimer);
+      this.toggleTimer = null;
+    }
+
+    this.toggleCapture?.stop();
+    this.toggleCapture = null;
+    hideListeningOverlay();
+
+    const audioData = this.toggleBuffer;
+    this.toggleBuffer = Buffer.alloc(0);
+    this.state = 'idle';
+
+    if (audioData.length < 3200) {
+      playErrorTone();
+      if (this.config.wakeWordEnabled) this.startWakeWordListener();
+      return;
+    }
+
+    playAcknowledgeChime();
+
+    try {
+      const text = await this.transcribe(audioData);
+      if (text.trim()) this.processText(text.trim());
+    } catch {
+      playErrorTone();
+    }
+
+    if (this.config.wakeWordEnabled) this.startWakeWordListener();
   }
 
   // ─── Wake Word ─────────────────────────────────────────
@@ -333,9 +483,21 @@ export class VoiceActivation {
       this.capture.stop();
       this.capture = null;
     }
+    if (this.holdCapture) {
+      this.holdCapture.stop();
+      this.holdCapture = null;
+    }
+    if (this.toggleCapture) {
+      this.toggleCapture.stop();
+      this.toggleCapture = null;
+    }
     if (this.pttTimer) {
       clearTimeout(this.pttTimer);
       this.pttTimer = null;
+    }
+    if (this.toggleTimer) {
+      clearTimeout(this.toggleTimer);
+      this.toggleTimer = null;
     }
   }
 }

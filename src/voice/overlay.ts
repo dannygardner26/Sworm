@@ -51,8 +51,15 @@ let overlayHwnd: number | null = null;
 /**
  * Show a small "Listening..." overlay at the top-center of the screen.
  */
-export function showListeningOverlay(): void {
+export function showListeningOverlay(mode?: 'hold' | 'toggle'): void {
   if (overlayHwnd) return; // Already showing
+
+  const labelText =
+    mode === 'hold'
+      ? '  Listening (hold)...'
+      : mode === 'toggle'
+        ? '  Listening (toggle)...'
+        : '  Listening...';
 
   try {
     const screenW = GetSystemMetrics(SM_CXSCREEN) as number;
@@ -66,7 +73,7 @@ export function showListeningOverlay(): void {
     const hwnd = CreateWindowExW(
       WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE,
       'Static', // Use built-in Static window class
-      '  Listening...',
+      labelText,
       WS_POPUP | WS_VISIBLE,
       x,
       y,
