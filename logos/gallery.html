@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sworm Logo Gallery</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #050508;
+    color: #e0e0e0;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 48px 20px 12px;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: #fff;
+  }
+  header p { color: #555; margin-top: 6px; font-size: 0.8rem; }
+
+  /* Color controls */
+  .color-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    flex-wrap: wrap;
+  }
+  .color-bar label { color: #666; font-size: 0.8rem; letter-spacing: 0.05em; }
+  .hue-wheel {
+    position: relative;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+    cursor: pointer;
+    border: 2px solid #222;
+  }
+  .hue-wheel .thumb {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 4px rgba(0,0,0,0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .presets {
+    display: flex;
+    gap: 8px;
+  }
+  .presets button {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid #222;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .presets button:hover { transform: scale(1.2); }
+  .presets button.active { border-color: #fff; box-shadow: 0 0 10px currentColor; }
+  .bg-toggle {
+    display: flex;
+    gap: 4px;
+    background: #111;
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .bg-toggle button {
+    background: none;
+    border: none;
+    color: #555;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+  }
+  .bg-toggle button.active { background: #222; color: #fff; }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px 20px;
+    flex-wrap: wrap;
+  }
+  .filters button {
+    background: transparent;
+    border: 1px solid #1a1a1a;
+    color: #555;
+    padding: 6px 16px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.25s;
+  }
+  .filters button:hover { border-color: #333; color: #aaa; }
+  .filters button.active { border-color: #444; color: #fff; background: #111; }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    padding: 0 32px 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #111;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: #2a2a2a;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  }
+  .card.fav::before {
+    content: '★';
+    position: absolute;
+    top: 10px; right: 10px;
+    color: #ff3366;
+    font-size: 1.1rem;
+    z-index: 3;
+    filter: drop-shadow(0 0 4px rgba(255,51,102,0.5));
+  }
+  .card canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+  }
+  .card-bottom {
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0a0a0e;
+  }
+  .card-bottom .name { font-size: 0.75rem; color: #888; font-weight: 500; }
+  .card-bottom .tag { font-size: 0.6rem; color: #444; text-transform: uppercase; letter-spacing: 0.08em; }
+  .card-bottom .actions { display: flex; gap: 4px; }
+  .card-bottom .actions button {
+    background: none;
+    border: 1px solid #1a1a1a;
+    color: #555;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-bottom .actions button:hover { border-color: #444; color: #fff; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(30px);
+  }
+  .lightbox.open { display: flex; }
+  .lightbox canvas {
+    max-width: min(80vw, 600px);
+    max-height: 80vh;
+    border-radius: 16px;
+  }
+  .lightbox .close {
+    position: absolute; top: 20px; right: 28px;
+    font-size: 1.8rem; color: #444; cursor: pointer;
+    background: none; border: none;
+  }
+  .lightbox .close:hover { color: #fff; }
+  .lightbox .nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-size: 2rem; color: #333; cursor: pointer;
+    background: none; border: none; padding: 20px;
+  }
+  .lightbox .nav:hover { color: #fff; }
+  .lightbox .nav.prev { left: 12px; }
+  .lightbox .nav.next { right: 12px; }
+  .lightbox .meta {
+    position: absolute; bottom: 28px;
+    text-align: center; width: 100%;
+    color: #555; font-size: 0.85rem;
+  }
+  .lightbox .meta strong { color: #ccc; }
+
+  /* Compare */
+  .compare-strip {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #0c0c12; border-top: 1px solid #1a1a1a;
+    padding: 14px 24px; z-index: 50;
+    align-items: center; justify-content: space-between;
+  }
+  .compare-strip.on { display: flex; }
+  .compare-strip .pills { display: flex; gap: 8px; align-items: center; }
+  .compare-strip .pills img {
+    width: 40px; height: 40px; border-radius: 8px;
+    object-fit: cover; border: 1px solid #333;
+  }
+  .compare-strip .pills span { color: #666; font-size: 0.8rem; }
+  .compare-strip .btns { display: flex; gap: 8px; }
+  .compare-strip .btns button {
+    border: none; padding: 8px 20px; border-radius: 8px;
+    cursor: pointer; font-size: 0.8rem; font-weight: 500;
+  }
+  .compare-strip .btns .go { background: #fff; color: #000; }
+  .compare-strip .btns .clr { background: #1a1a1a; color: #888; }
+
+  .compare-view {
+    display: none; position: fixed; inset: 0;
+    background: #050508; z-index: 90;
+    padding: 32px; overflow: auto;
+  }
+  .compare-view.open { display: block; }
+  .compare-view .bar {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 24px;
+  }
+  .compare-view .bar h2 { font-weight: 400; font-size: 1.1rem; letter-spacing: 0.05em; }
+  .compare-view .bar button {
+    background: #111; border: 1px solid #222; color: #aaa;
+    padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+  }
+  .compare-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .compare-layout canvas {
+    width: 100%; border-radius: 12px; border: 1px solid #1a1a1a;
+  }
+  .compare-layout .lbl { text-align: center; margin-top: 8px; color: #666; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SWORM</h1>
+  <p>Logo concepts &mdash; Imagen 4.0 &mdash; Drag the color wheel to recolor all logos live</p>
+</header>
+
+<div class="color-bar">
+  <label>COLOR</label>
+  <div class="hue-wheel" id="hueWheel"><div class="thumb" id="hueThumb"></div></div>
+  <div class="presets" id="presets"></div>
+  <div style="width:1px;height:24px;background:#1a1a1a"></div>
+  <label>BG</label>
+  <div class="bg-toggle">
+    <button class="active" data-bg="#050508">Black</button>
+    <button data-bg="#ffffff">White</button>
+    <button data-bg="#111118">Dark</button>
+  </div>
+</div>
+
+<div class="filters">
+  <button class="active" data-f="all">All</button>
+  <button data-f="new">New Ideas</button>
+  <button data-f="v4simple">Simple</button>
+  <button data-f="v4sflat">Flat S</button>
+  <button data-f="v4radial">Pinwheel</button>
+  <button data-f="v4cluster">Cluster</button>
+  <button data-f="v4flock">Flock</button>
+  <button data-f="swarm">Worm Swarm</button>
+  <button data-f="formation">Formation</button>
+  <button data-f="sform">Worm S</button>
+  <button data-f="radial">Radial</button>
+  <button data-f="knot">Worm Knot</button>
+  <button data-f="monogram">S Monogram</button>
+  <button data-f="dots">Dot Formation</button>
+  <button data-f="network">Network</button>
+  <button data-f="arrows">Arrows</button>
+  <button data-f="worm">Worm Glyph</button>
+  <button data-f="fav">Favorites</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="compare-strip" id="cmpStrip">
+  <div class="pills"><span id="cmpCount">0</span><div id="cmpThumbs" style="display:flex;gap:6px"></div></div>
+  <div class="btns">
+    <button class="go" onclick="openCompare()">Compare</button>
+    <button class="clr" onclick="clearCmp()">Clear</button>
+  </div>
+</div>
+
+<div class="lightbox" id="lb">
+  <button class="close" onclick="closeLb()">&times;</button>
+  <button class="nav prev" onclick="navLb(-1)">&#8249;</button>
+  <canvas id="lbCanvas"></canvas>
+  <button class="nav next" onclick="navLb(1)">&#8250;</button>
+  <div class="meta"><strong id="lbName"></strong> &mdash; <span id="lbTag"></span></div>
+</div>
+
+<div class="compare-view" id="cmpView">
+  <div class="bar">
+    <h2>Side-by-Side</h2>
+    <button onclick="closeCmp()">Back</button>
+  </div>
+  <div class="compare-layout" id="cmpGrid"></div>
+</div>
+
+<script>
+const logos = [
+  // New ideas
+  { file: 'v5_spiral_1.png',    name: 'Spiral A',    cat: 'new' },
+  { file: 'v5_spiral_2.png',    name: 'Spiral B',    cat: 'new' },
+  { file: 'v5_helix_2.png',     name: 'Helix',       cat: 'new' },
+  { file: 'v5_orbit_2.png',     name: 'Orbit',       cat: 'new' },
+  { file: 'v5_wave3_1.png',     name: 'Waves',       cat: 'new' },
+  { file: 'v5_crown_2.png',     name: 'Crown',       cat: 'new' },
+  { file: 'v6_triskele_1.png',  name: 'Triskele A',  cat: 'new' },
+  { file: 'v6_triskele_2.png',  name: 'Triskele B',  cat: 'new' },
+  { file: 'v7_flower_1.png',    name: 'Flower',      cat: 'new' },
+  { file: 'clean_pinwheel_1.png', name: 'Pinwheel Clean A', cat: 'new' },
+  { file: 'clean_pinwheel_6.png', name: 'Pinwheel Clean B', cat: 'new' },
+  // v4 — Ultra simple, 2-color
+  { file: 'v4_simple_1.png',   name: 'Simple A',    cat: 'v4simple' },
+  { file: 'v4_simple_2.png',   name: 'Simple B',    cat: 'v4simple' },
+  { file: 'v4_sflat_1.png',    name: 'Flat S A',    cat: 'v4sflat' },
+  { file: 'v4_sflat_2.png',    name: 'Flat S B',    cat: 'v4sflat' },
+  { file: 'v4_radial_1.png',   name: 'Pinwheel A',  cat: 'v4radial' },
+  { file: 'v4_radial_2.png',   name: 'Pinwheel B',  cat: 'v4radial' },
+  { file: 'v4_cluster_1.png',  name: 'Cluster A',   cat: 'v4cluster' },
+  { file: 'v4_cluster_2.png',  name: 'Cluster B',   cat: 'v4cluster' },
+  { file: 'v4_flock_1.png',    name: 'Flock A',     cat: 'v4flock' },
+  { file: 'v4_flock_2.png',    name: 'Flock B',     cat: 'v4flock' },
+  // v3 — Swarm of Worms
+  { file: 'v3_swarm_1.png',     name: 'Swarm A',     cat: 'swarm' },
+  { file: 'v3_swarm_2.png',     name: 'Swarm B',     cat: 'swarm' },
+  { file: 'v3_formation_1.png', name: 'Formation A', cat: 'formation' },
+  { file: 'v3_formation_2.png', name: 'Formation B', cat: 'formation' },
+  { file: 'v3_formation_3.png', name: 'Formation C', cat: 'formation' },
+  { file: 'v3_sform_1.png',     name: 'Worm S A',    cat: 'sform' },
+  { file: 'v3_sform_2.png',     name: 'Worm S B',    cat: 'sform' },
+  { file: 'v3_sform_3.png',     name: 'Worm S C',    cat: 'sform' },
+  { file: 'v3_radial_1.png',    name: 'Radial A',    cat: 'radial' },
+  { file: 'v3_radial_2.png',    name: 'Radial B',    cat: 'radial' },
+  { file: 'v3_radial_3.png',    name: 'Radial C',    cat: 'radial' },
+  { file: 'v3_knot_1.png',      name: 'Knot A',      cat: 'knot' },
+  { file: 'v3_knot_2.png',      name: 'Knot B',      cat: 'knot' },
+  { file: 'v3_knot_3.png',      name: 'Knot C',      cat: 'knot' },
+  // v2 — Minimal marks
+  { file: 'v2_monogram_1.png',  name: 'Monogram A',  cat: 'monogram' },
+  { file: 'v2_monogram_2.png',  name: 'Monogram B',  cat: 'monogram' },
+  { file: 'v2_monogram_3.png',  name: 'Monogram C',  cat: 'monogram' },
+  { file: 'v2_dots_1.png',      name: 'Dots A',      cat: 'dots' },
+  { file: 'v2_dots_2.png',      name: 'Dots B',      cat: 'dots' },
+  { file: 'v2_dots_3.png',      name: 'Dots C',      cat: 'dots' },
+  { file: 'v2_network_1.png',   name: 'Network A',   cat: 'network' },
+  { file: 'v2_network_2.png',   name: 'Network B',   cat: 'network' },
+  { file: 'v2_network_3.png',   name: 'Network C',   cat: 'network' },
+  { file: 'v2_arrows_1.png',    name: 'Arrows A',    cat: 'arrows' },
+  { file: 'v2_arrows_2.png',    name: 'Arrows B',    cat: 'arrows' },
+  { file: 'v2_arrows_3.png',    name: 'Arrows C',    cat: 'arrows' },
+  { file: 'v2_worm_1.png',      name: 'Worm A',      cat: 'worm' },
+  { file: 'v2_worm_2.png',      name: 'Worm B',      cat: 'worm' },
+  { file: 'v2_worm_3.png',      name: 'Worm C',      cat: 'worm' },
+];
+
+// State
+let images = [];       // loaded Image objects
+let hue = 0;           // 0 = white (no tint)
+let sat = 0;           // 0 = no color
+let bgColor = '#050508';
+let filter = 'all';
+let favs = new Set(JSON.parse(localStorage.getItem('sw2_fav') || '[]'));
+let cmpSet = new Set();
+let lbIdx = 0;
+
+// Presets
+const presets = [
+  { color: '#ffffff', h: 0,   s: 0,   label: 'White' },
+  { color: '#4af',   h: 207, s: 1,   label: 'Blue' },
+  { color: '#a78bfa', h: 263, s: 0.8, label: 'Purple' },
+  { color: '#34d399', h: 160, s: 0.7, label: 'Green' },
+  { color: '#f97316', h: 25,  s: 1,   label: 'Orange' },
+  { color: '#f43f5e', h: 350, s: 0.9, label: 'Rose' },
+  { color: '#facc15', h: 48,  s: 1,   label: 'Yellow' },
+  { color: '#06b6d4', h: 188, s: 0.9, label: 'Cyan' },
+];
+
+// Init presets
+const presetsEl = document.getElementById('presets');
+presets.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.style.background = p.color;
+  if (i === 0) btn.classList.add('active');
+  btn.title = p.label;
+  btn.onclick = () => {
+    hue = p.h; sat = p.s;
+    presetsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    positionHueThumb();
+    recolorAll();
+  };
+  presetsEl.appendChild(btn);
+});
+
+// Hue wheel interaction
+const wheel = document.getElementById('hueWheel');
+const thumb = document.getElementById('hueThumb');
+
+function positionHueThumb() {
+  const angle = (hue - 90) * Math.PI / 180;
+  const r = 20;
+  thumb.style.left = (24 + r * Math.cos(angle)) + 'px';
+  thumb.style.top = (24 + r * Math.sin(angle)) + 'px';
+  thumb.style.background = sat > 0 ? `hsl(${hue}, 100%, 60%)` : '#fff';
+}
+positionHueThumb();
+
+function wheelHandler(e) {
+  const rect = wheel.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const angle = Math.atan2(clientY - cy, clientX - cx);
+  hue = ((angle * 180 / Math.PI) + 90 + 360) % 360;
+  sat = 1;
+  presetsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  positionHueThumb();
+  recolorAll();
+}
+
+let wheelDown = false;
+wheel.addEventListener('pointerdown', e => { wheelDown = true; wheel.setPointerCapture(e.pointerId); wheelHandler(e); });
+wheel.addEventListener('pointermove', e => { if (wheelDown) wheelHandler(e); });
+wheel.addEventListener('pointerup', () => { wheelDown = false; });
+
+// BG toggle
+document.querySelector('.bg-toggle').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('.bg-toggle button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  bgColor = e.target.dataset.bg;
+  document.body.style.background = bgColor;
+  recolorAll();
+});
+
+// Filters
+document.querySelector('.filters').addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  filter = e.target.dataset.f;
+  buildGrid();
+});
+
+// Load images then build
+let loaded = 0;
+logos.forEach((l, i) => {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { loaded++; if (loaded === logos.length) buildGrid(); };
+  img.onerror = () => { loaded++; if (loaded === logos.length) buildGrid(); };
+  img.src = l.file;
+  images[i] = img;
+});
+
+// Recolor a single canvas
+function recolor(canvas, idx) {
+  const img = images[idx];
+  if (!img || !img.naturalWidth) return;
+  const s = 256;
+  canvas.width = s; canvas.height = s;
+  const ctx = canvas.getContext('2d');
+
+  // Draw image
+  ctx.drawImage(img, 0, 0, s, s);
+
+  // Get pixel data
+  const imageData = ctx.getImageData(0, 0, s, s);
+  const d = imageData.data;
+
+  // Parse bg
+  const bgR = parseInt(bgColor.slice(1,3),16) || 0;
+  const bgG = parseInt(bgColor.slice(3,5),16) || 0;
+  const bgB = parseInt(bgColor.slice(5,7),16) || 0;
+
+  // Target color from hue
+  let tR, tG, tB;
+  if (sat === 0) { tR = tG = tB = 255; }
+  else {
+    const c = hslToRgb(hue / 360, 1, 0.5);
+    tR = c[0]; tG = c[1]; tB = c[2];
+  }
+
+  for (let i = 0; i < d.length; i += 4) {
+    // Luminance of original pixel
+    const lum = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114) / 255;
+
+    if (lum < 0.25) {
+      // Dark pixel -> bg color
+      d[i]   = bgR;
+      d[i+1] = bgG;
+      d[i+2] = bgB;
+    } else {
+      // Light pixel -> tinted by luminance
+      const t = lum;
+      d[i]   = Math.round(bgR * (1 - t) + tR * t);
+      d[i+1] = Math.round(bgG * (1 - t) + tG * t);
+      d[i+2] = Math.round(bgB * (1 - t) + tB * t);
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function getVisible() {
+  return logos.map((l, i) => ({ ...l, _i: i })).filter(l => {
+    if (filter === 'all') return true;
+    if (filter === 'fav') return favs.has(l._i);
+    return l.cat === filter;
+  });
+}
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  const vis = getVisible();
+  grid.innerHTML = vis.map(l => `
+    <div class="card ${favs.has(l._i) ? 'fav' : ''}" data-i="${l._i}"
+         style="${cmpSet.has(l._i) ? 'border-color:#444' : ''}">
+      <canvas data-idx="${l._i}" onclick="openLb(${l._i})"></canvas>
+      <div class="card-bottom">
+        <div>
+          <div class="name">${l.name}</div>
+          <div class="tag">${l.cat}</div>
+        </div>
+        <div class="actions">
+          <button onclick="toggleFav(${l._i})" title="Favorite">${favs.has(l._i)?'★':'☆'}</button>
+          <button onclick="toggleCmp(${l._i})" title="Compare">${cmpSet.has(l._i)?'✓':'+'}</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  recolorAll();
+}
+
+function recolorAll() {
+  document.querySelectorAll('.grid canvas[data-idx]').forEach(c => {
+    recolor(c, +c.dataset.idx);
+  });
+  // Also lightbox if open
+  const lbC = document.getElementById('lbCanvas');
+  if (document.getElementById('lb').classList.contains('open')) {
+    recolor(lbC, lbIdx);
+    lbC.style.maxWidth = 'min(80vw, 600px)';
+    lbC.style.maxHeight = '80vh';
+  }
+  // Compare view canvases
+  document.querySelectorAll('#cmpGrid canvas[data-idx]').forEach(c => {
+    recolor(c, +c.dataset.idx);
+  });
+}
+
+function toggleFav(i) {
+  favs.has(i) ? favs.delete(i) : favs.add(i);
+  localStorage.setItem('sw2_fav', JSON.stringify([...favs]));
+  buildGrid();
+}
+
+function toggleCmp(i) {
+  cmpSet.has(i) ? cmpSet.delete(i) : cmpSet.add(i);
+  updateCmpStrip();
+  buildGrid();
+}
+
+function updateCmpStrip() {
+  const strip = document.getElementById('cmpStrip');
+  if (cmpSet.size > 0) {
+    strip.classList.add('on');
+    document.getElementById('cmpCount').textContent = cmpSet.size + ' selected';
+  } else {
+    strip.classList.remove('on');
+  }
+}
+
+function clearCmp() { cmpSet.clear(); updateCmpStrip(); buildGrid(); }
+
+function openCompare() {
+  const grid = document.getElementById('cmpGrid');
+  grid.innerHTML = [...cmpSet].map(i => `
+    <div><canvas data-idx="${i}"></canvas><div class="lbl">${logos[i].name}</div></div>
+  `).join('');
+  document.getElementById('cmpView').classList.add('open');
+  // Render after DOM update
+  requestAnimationFrame(() => {
+    grid.querySelectorAll('canvas').forEach(c => recolor(c, +c.dataset.idx));
+  });
+}
+function closeCmp() { document.getElementById('cmpView').classList.remove('open'); }
+
+function openLb(i) {
+  lbIdx = i;
+  renderLb();
+  document.getElementById('lb').classList.add('open');
+}
+function closeLb() { document.getElementById('lb').classList.remove('open'); }
+function navLb(d) {
+  const vis = getVisible();
+  const curPos = vis.findIndex(l => l._i === lbIdx);
+  const next = (curPos + d + vis.length) % vis.length;
+  lbIdx = vis[next]._i;
+  renderLb();
+}
+function renderLb() {
+  const c = document.getElementById('lbCanvas');
+  recolor(c, lbIdx);
+  c.style.maxWidth = 'min(80vw, 600px)';
+  c.style.maxHeight = '80vh';
+  document.getElementById('lbName').textContent = logos[lbIdx].name;
+  document.getElementById('lbTag').textContent = logos[lbIdx].cat;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeLb(); closeCmp(); }
+  if (e.key === 'ArrowLeft') navLb(-1);
+  if (e.key === 'ArrowRight') navLb(1);
+});
+</script>
+</body>
+</html>

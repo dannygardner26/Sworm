@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sworm — spatial agent orchestration</title>
+  <link rel="icon" href="../logos/sworm-icon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      line-height: 1.7;
+      text-transform: lowercase;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+      background: #fff;
+      color: #000;
+    }
+
+    a {
+      color: #fff;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      transition: border-color 0.2s;
+    }
+
+    a:hover {
+      border-color: #fff;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ——— hero ——— */
+    .hero {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px 40px;
+    }
+
+    .hero-logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 1s ease forwards;
+    }
+
+    .hero-wordmark {
+      font-size: clamp(2.5rem, 7vw, 4rem);
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fadeUp 1s ease 0.2s forwards;
+    }
+
+    .hero-tagline {
+      font-size: clamp(0.85rem, 2vw, 1.1rem);
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      color: rgba(255,255,255,0.5);
+      opacity: 0;
+      animation: fadeUp 1s ease 0.4s forwards;
+    }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 40px;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.2);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ——— sections ——— */
+    section {
+      padding: 48px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 16px;
+    }
+
+    .section-heading {
+      font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      margin-bottom: 16px;
+    }
+
+    .section-text {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 560px;
+      line-height: 1.9;
+    }
+
+    /* ——— install ——— */
+    .install-block {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-top: 24px;
+      max-width: 440px;
+    }
+
+    .install-block code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      color: rgba(255,255,255,0.4);
+      cursor: pointer;
+      padding: 6px 8px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+    }
+
+    .copy-btn:hover {
+      border-color: rgba(255,255,255,0.4);
+      color: #fff;
+    }
+
+    .copy-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ——— code block ——— */
+    .code-block {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-top: 24px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 2;
+    }
+
+    .code-block .prompt { color: rgba(255,255,255,0.3); }
+    .code-block .cmd { color: #fff; }
+    .code-block .comment { color: rgba(255,255,255,0.2); }
+
+    /* ——— features grid ——— */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .feature-card {
+      background: #000;
+      padding: 24px 20px;
+      transition: background 0.3s;
+    }
+
+    .feature-card:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .feature-card h3 {
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.35);
+      line-height: 1.7;
+    }
+
+    /* ——— open source ——— */
+    .oss-section {
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    .oss-section .section-text {
+      margin: 0 auto 32px;
+      text-align: center;
+    }
+
+    .github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 14px 28px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      color: #fff;
+      text-transform: lowercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .github-btn:hover {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    .github-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ——— footer ——— */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 48px 24px;
+    }
+
+    .footer-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-wordmark {
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.3);
+      border: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+
+    /* ——— responsive ——— */
+    @media (max-width: 700px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 500px) {
+      section { padding: 72px 20px; }
+      .install-block { flex-direction: column; gap: 16px; align-items: flex-start; }
+    }
+
+    /* ——— fade-in on scroll ——— */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- hero -->
+  <div class="hero">
+    <img src="../logos/sworm-icon.png" alt="sworm" class="hero-logo">
+    <div class="hero-wordmark">sworm</div>
+    <div class="hero-tagline">spatial agent orchestration</div>
+  </div>
+
+  <!-- install -->
+  <section>
+    <div class="container fade-in">
+      <div class="section-label">get started</div>
+      <div class="install-block">
+        <code>git clone https://github.com/dannygardner26/Sworm.git && cd Sworm && npm install</code>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('git clone https://github.com/dannygardner26/Sworm.git && cd Sworm && npm install');this.innerHTML='<svg viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;><polyline points=&quot;20 6 9 17 4 12&quot;></polyline></svg>';setTimeout(()=>this.innerHTML='<svg viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;><rect x=&quot;9&quot; y=&quot;9&quot; width=&quot;13&quot; height=&quot;13&quot; rx=&quot;2&quot;></rect><path d=&quot;M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1&quot;></path></svg>',1500)" aria-label="Copy to clipboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- what is sworm -->
+  <section>
+    <div class="container fade-in">
+      <div class="section-label">what is sworm?</div>
+      <p class="section-text">
+        deploy ai agents and apps across multi-monitor setups via named formations. define layouts in yaml, deploy with one command.
+      </p>
+    </div>
+  </section>
+
+  <!-- quick start -->
+  <section>
+    <div class="container fade-in">
+      <div class="section-label">quick start</div>
+      <div class="code-block">
+        <div><span class="prompt">$ </span><span class="cmd">sworm deploy pilot</span>      <span class="comment"># deploy a formation</span></div>
+        <div><span class="prompt">$ </span><span class="cmd">sworm list</span>              <span class="comment"># see available formations</span></div>
+        <div><span class="prompt">$ </span><span class="cmd">sworm kill</span>              <span class="comment"># tear down everything</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- features -->
+  <section>
+    <div class="container fade-in">
+      <div class="section-label">features</div>
+    </div>
+    <div class="container">
+      <div class="features-grid fade-in">
+        <div class="feature-card">
+          <h3>spatial formations</h3>
+          <p>yaml-defined multi-monitor layouts</p>
+        </div>
+        <div class="feature-card">
+          <h3>ai agents</h3>
+          <p>multi-provider llm with tool use</p>
+        </div>
+        <div class="feature-card">
+          <h3>voice control</h3>
+          <p>whisper-powered speech commands</p>
+        </div>
+        <div class="feature-card">
+          <h3>global hotkeys</h3>
+          <p>win32 keyboard shortcuts</p>
+        </div>
+        <div class="feature-card">
+          <h3>electron app</h3>
+          <p>rich desktop ui with terminal panes</p>
+        </div>
+        <div class="feature-card">
+          <h3>git worktrees</h3>
+          <p>auto-create isolated branches</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- open source -->
+  <section class="oss-section">
+    <div class="container fade-in">
+      <div class="section-heading">open source</div>
+      <p class="section-text">
+        mit licensed. contributions welcome.
+      </p>
+      <a href="https://github.com/dannygardner26/Sworm" class="github-btn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12.01 12.01 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        view on github
+      </a>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-wordmark">sworm</div>
+      <div class="footer-links">
+        <a href="https://github.com/dannygardner26/Sworm" target="_blank" rel="noopener">github</a>
+        <a href="#">docs</a>
+        <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">mit license</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- scroll fade-in observer -->
+  <script>
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+
+  <!-- animated worm -->
+  <script>
+  (function() {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    const SEG_COUNT = 45, HEAD_R = 7, TAIL_R = 2, SEG_SPACING = 6;
+    let segments = [], headTarget = {x:0,y:0}, scrollY = 0, lastScrollY = 0, idleTime = 0, time = 0;
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    function getPathPoint(t) {
+      const W = window.innerWidth, H = document.body.scrollHeight, m = 40;
+      const L = m, R = W - m;
+      t = Math.max(0, Math.min(1, t));
+      const wp = [
+        {t:0,x:R,yf:0},{t:.05,x:R,yf:.04},{t:.10,x:L,yf:.08},{t:.15,x:L,yf:.15},
+        {t:.22,x:R,yf:.22},{t:.28,x:R,yf:.30},{t:.35,x:L,yf:.36},{t:.42,x:L,yf:.44},
+        {t:.50,x:R,yf:.50},{t:.57,x:R,yf:.58},{t:.64,x:L,yf:.64},{t:.70,x:L,yf:.72},
+        {t:.78,x:R,yf:.78},{t:.85,x:R,yf:.86},{t:.92,x:L,yf:.92},{t:1,x:L,yf:1}
+      ];
+      let i = 0;
+      for (let j=0;j<wp.length-1;j++) if(t>=wp[j].t&&t<=wp[j+1].t){i=j;break;}
+      if(t>=wp[wp.length-1].t) i=wp.length-2;
+      const a=wp[i],b=wp[i+1], lt=(t-a.t)/(b.t-a.t), e=lt*lt*(3-2*lt);
+      const mx=(a.x+b.x)/2, cpX=Math.abs(b.x-a.x)>W*0.3?mx:(a.x===L?L-20:R+20);
+      return {x:(1-e)*(1-e)*a.x+2*(1-e)*e*cpX+e*e*b.x, y:((1-e)*a.yf+e*b.yf)*H};
+    }
+
+    function ps(px,py){return{x:px,y:py-window.scrollY};}
+    const p0=ps(getPathPoint(0).x,getPathPoint(0).y);
+    for(let i=0;i<SEG_COUNT;i++) segments.push({x:p0.x,y:p0.y});
+    window.addEventListener('scroll',function(){scrollY=window.scrollY;idleTime=0;},{passive:true});
+
+    function update(dt){
+      time+=dt;
+      const sT=scrollY/Math.max(document.body.scrollHeight-window.innerHeight,1);
+      lastScrollY=scrollY;
+      const pp=getPathPoint(sT),sp=ps(pp.x,pp.y);
+      idleTime+=dt;
+      const sw=Math.min(idleTime*0.5,1);
+      headTarget.x=sp.x+Math.sin(time*1.5)*12*sw;
+      headTarget.y=sp.y+Math.cos(time*1.1)*8*sw;
+      segments[0].x+=(headTarget.x-segments[0].x)*0.12;
+      segments[0].y+=(headTarget.y-segments[0].y)*0.12;
+      for(let i=1;i<SEG_COUNT;i++){
+        const p=segments[i-1],c=segments[i],dx=p.x-c.x,dy=p.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d>SEG_SPACING){const r=SEG_SPACING/d;c.x=p.x-dx*r;c.y=p.y-dy*r;}
+      }
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let i=SEG_COUNT-1;i>=0;i--){
+        const t=i/(SEG_COUNT-1),r=HEAD_R*(1-t)+TAIL_R*t;
+        ctx.beginPath();ctx.arc(segments[i].x,segments[i].y,r,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,'+(0.85*(1-t*0.7))+')';ctx.fill();
+      }
+      if(segments.length>=2){
+        const h=segments[0],n=segments[1],a=Math.atan2(h.y-n.y,h.x-n.x);
+        for(let s=-1;s<=1;s+=2){
+          const ex=h.x+Math.cos(a)*HEAD_R*0.35+Math.cos(a+Math.PI/2)*s*HEAD_R*0.45;
+          const ey=h.y+Math.sin(a)*HEAD_R*0.35+Math.sin(a+Math.PI/2)*s*HEAD_R*0.45;
+          ctx.beginPath();ctx.arc(ex,ey,2,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+        }
+      }
+    }
+
+    let lt=performance.now();
+    (function loop(now){var dt=Math.min((now-lt)/1000,.05);lt=now;update(dt);draw();requestAnimationFrame(loop);})(lt);
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWORM — Logo Lockups</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .page-header { text-align: center; padding: 48px 20px 16px; }
+  .page-header h1 { font-size: 1.2rem; font-weight: 400; letter-spacing: 0.2em; color: #666; }
+  .page-header p { color: #333; font-size: 0.75rem; margin-top: 6px; }
+
+  .controls {
+    display: flex; justify-content: center; gap: 12px;
+    padding: 16px 20px 32px; flex-wrap: wrap;
+  }
+  .controls .group {
+    display: flex; gap: 4px; background: #111;
+    border-radius: 8px; padding: 3px;
+  }
+  .controls .group label {
+    color: #444; font-size: 0.7rem; padding: 6px 10px;
+    display: flex; align-items: center; letter-spacing: 0.05em;
+  }
+  .controls button {
+    background: none; border: none; color: #555;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 0.75rem; transition: all 0.2s; font-family: inherit;
+  }
+  .controls button:hover { color: #aaa; }
+  .controls button.active { background: #222; color: #fff; }
+
+  .section {
+    max-width: 1100px; margin: 0 auto 48px; padding: 0 32px;
+  }
+  .section h2 {
+    font-size: 0.7rem; letter-spacing: 0.15em; color: #333;
+    text-transform: uppercase; margin-bottom: 20px;
+    padding-bottom: 8px; border-bottom: 1px solid #151515;
+  }
+
+  .lockup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 16px;
+  }
+  .lockup-card {
+    border: 1px solid #161616; border-radius: 16px; overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .lockup-card:hover { border-color: #2a2a2a; }
+  .lockup-preview {
+    padding: 48px 40px; display: flex; align-items: center;
+    justify-content: center; min-height: 160px; transition: background 0.3s;
+  }
+  .lockup-preview.dark { background: #000; }
+  .lockup-preview.light { background: #fff; }
+  .lockup-preview.gray { background: #111; }
+  .lockup-label {
+    padding: 10px 16px; background: #0a0a0e;
+    border-top: 1px solid #151515; font-size: 0.7rem; color: #444;
+    display: flex; justify-content: space-between;
+  }
+
+  .lockup { display: flex; align-items: center; gap: 16px; }
+  .lockup img { flex-shrink: 0; object-fit: contain; }
+  .lockup .wordmark { white-space: nowrap; line-height: 1; }
+  .lockup.vertical { flex-direction: column; gap: 12px; text-align: center; }
+
+  .o-lockup { display: flex; align-items: center; line-height: 1; white-space: nowrap; }
+  .o-lockup img { display: inline-block; vertical-align: middle; margin: 0 -2px; }
+
+  .icon-row {
+    display: flex; gap: 24px; align-items: center;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .icon-box {
+    border: 1px solid #161616; border-radius: 12px; padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    transition: border-color 0.3s;
+  }
+  .icon-box:hover { border-color: #333; }
+  .icon-box span { font-size: 0.65rem; color: #444; }
+
+  .banner-card { border: 1px solid #161616; border-radius: 16px; overflow: hidden; margin-bottom: 16px; }
+  .banner-preview {
+    padding: 40px 60px; display: flex; align-items: center;
+    justify-content: space-between; min-height: 120px;
+  }
+  .banner-preview.dark { background: #000; }
+  .banner-preview.light { background: #fff; }
+  .banner-label {
+    padding: 10px 16px; background: #0a0a0e;
+    border-top: 1px solid #151515; font-size: 0.7rem; color: #444;
+  }
+
+  .tagline-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;
+  }
+  .tagline-card {
+    border: 1px solid #161616; border-radius: 16px; overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .tagline-card:hover { border-color: #2a2a2a; }
+  .tagline-preview {
+    padding: 36px 32px; display: flex; flex-direction: column;
+    align-items: center; gap: 16px; min-height: 180px; justify-content: center;
+  }
+  .tagline-preview.dark { background: #000; }
+  .tagline-preview.light { background: #fff; }
+  .tagline-text {
+    font-size: 0.8rem; letter-spacing: 0.08em; opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>SWORM LOGO SYSTEM</h1>
+  <p>Triskele mark &mdash; all lockups, taglines, and use cases</p>
+</div>
+
+<div class="controls">
+  <div class="group">
+    <label>FONT</label>
+    <button data-font="'Inter', sans-serif" data-weight="700">Inter</button>
+    <button data-font="'Space Grotesk', sans-serif" data-weight="600">Space Grotesk</button>
+    <button class="active" data-font="'JetBrains Mono', monospace" data-weight="600">JetBrains</button>
+    <button data-font="'Outfit', sans-serif" data-weight="700">Outfit</button>
+  </div>
+  <div class="group">
+    <label>CASE</label>
+    <button data-case="uppercase">UPPER</button>
+    <button data-case="none">Mixed</button>
+    <button class="active" data-case="lowercase">lower</button>
+  </div>
+  <div class="group">
+    <label>SPACING</label>
+    <button data-spacing="0.05em">Tight</button>
+    <button data-spacing="0.15em">Normal</button>
+    <button class="active" data-spacing="0.3em">Wide</button>
+    <button data-spacing="0.5em">Ultra</button>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Horizontal Lockups</h2>
+  <div class="lockup-grid" id="hGrid"></div>
+</div>
+
+<div class="section">
+  <h2>Vertical / Stacked</h2>
+  <div class="lockup-grid" id="vGrid"></div>
+</div>
+
+<div class="section">
+  <h2>Logo as "O" in SWORM</h2>
+  <div class="lockup-grid" id="oGrid"></div>
+</div>
+
+<div class="section">
+  <h2>With Taglines</h2>
+  <div class="tagline-grid" id="tagGrid"></div>
+</div>
+
+<div class="section">
+  <h2>Icon Sizes</h2>
+  <div class="icon-row" id="iconRow"></div>
+</div>
+
+<div class="section">
+  <h2>Full-Width Banners</h2>
+  <div id="bannerSection"></div>
+</div>
+
+<div style="height:80px"></div>
+
+<script>
+const ICON = 'sworm-icon.png';
+let font = "'JetBrains Mono', monospace";
+let weight = '600';
+let textCase = 'lowercase';
+let spacing = '0.3em';
+
+const taglines = [
+  'Orchestrate the swarm',
+  'Your agents, in formation',
+  'Deploy agents. Command the swarm.',
+  'Agents move together',
+  'One command. Many agents.',
+  'The hive mind for your terminal',
+  'Spatial agent orchestration',
+  'Release the swarm',
+  'Coordinate. Deploy. Sworm.',
+  'From chaos, formation',
+  'Agents that move as one',
+  'Think together. Ship faster.',
+];
+
+function txt(word, size) {
+  return '<span class="wordmark" style="font-family:'+font+';font-weight:'+weight+';text-transform:'+textCase+';letter-spacing:'+spacing+(size?';font-size:'+size+'px':'')+'">'+word+'</span>';
+}
+
+function oTxt(size, color) {
+  const imgSize = Math.round(size * 0.82);
+  const style = 'font-family:'+font+';font-weight:'+weight+';text-transform:'+textCase+';letter-spacing:'+spacing+';font-size:'+size+'px;color:'+color;
+  const filter = color === '#000' ? 'invert(1)' : 'none';
+  return '<div class="o-lockup" style="'+style+'">SW<img src="'+ICON+'" width="'+imgSize+'" height="'+imgSize+'" style="filter:'+filter+';border-radius:'+Math.round(imgSize*0.15)+'px">RM</div>';
+}
+
+function img(size, invert) {
+  const f = invert ? 'filter:invert(1);' : '';
+  return '<img src="'+ICON+'" width="'+size+'" height="'+size+'" style="'+f+'border-radius:'+Math.round(size*0.12)+'px">';
+}
+
+function render() {
+  // Horizontal
+  document.getElementById('hGrid').innerHTML = [
+    { bg:'dark', is:48, fs:32, c:'#fff', l:'Dark Large' },
+    { bg:'dark', is:36, fs:24, c:'#fff', l:'Dark Medium' },
+    { bg:'dark', is:24, fs:16, c:'#fff', l:'Dark Small' },
+    { bg:'light', is:48, fs:32, c:'#000', l:'Light Large' },
+    { bg:'light', is:36, fs:24, c:'#000', l:'Light Medium' },
+    { bg:'gray', is:48, fs:32, c:'#fff', l:'Gray Large' },
+  ].map(v => `
+    <div class="lockup-card"><div class="lockup-preview ${v.bg}">
+      <div class="lockup" style="color:${v.c};font-size:${v.fs}px">
+        ${img(v.is, v.c==='#000')} ${txt('Sworm')}
+      </div>
+    </div><div class="lockup-label"><span>${v.l}</span></div></div>
+  `).join('');
+
+  // Vertical
+  document.getElementById('vGrid').innerHTML = [
+    { bg:'dark', is:80, fs:28, c:'#fff', l:'Dark Stacked' },
+    { bg:'light', is:80, fs:28, c:'#000', l:'Light Stacked' },
+    { bg:'dark', is:100, fs:18, c:'#fff', l:'Icon Dominant' },
+    { bg:'dark', is:56, fs:14, c:'#666', l:'Subtle' },
+  ].map(v => `
+    <div class="lockup-card"><div class="lockup-preview ${v.bg}">
+      <div class="lockup vertical" style="color:${v.c};font-size:${v.fs}px">
+        ${img(v.is, v.c==='#000')} ${txt('Sworm')}
+      </div>
+    </div><div class="lockup-label"><span>${v.l}</span></div></div>
+  `).join('');
+
+  // O replacement
+  document.getElementById('oGrid').innerHTML = [
+    { bg:'dark', s:48, c:'#fff', l:'Dark Large' },
+    { bg:'dark', s:32, c:'#fff', l:'Dark Medium' },
+    { bg:'dark', s:20, c:'#fff', l:'Dark Inline' },
+    { bg:'light', s:48, c:'#000', l:'Light Large' },
+    { bg:'light', s:32, c:'#000', l:'Light Medium' },
+    { bg:'gray', s:40, c:'#fff', l:'Gray' },
+  ].map(v => `
+    <div class="lockup-card"><div class="lockup-preview ${v.bg}">
+      ${oTxt(v.s, v.c)}
+    </div><div class="lockup-label"><span>${v.l}</span><span>Logo as O</span></div></div>
+  `).join('');
+
+  // Taglines
+  document.getElementById('tagGrid').innerHTML = taglines.map((t, i) => {
+    const bg = i % 3 === 1 ? 'light' : 'dark';
+    const c = bg === 'light' ? '#000' : '#fff';
+    const inv = bg === 'light';
+    return `<div class="tagline-card"><div class="tagline-preview ${bg}">
+      <div class="lockup" style="color:${c};font-size:20px;gap:12px">
+        ${img(32, inv)} ${txt('Sworm')}
+      </div>
+      <div class="tagline-text" style="color:${c};font-family:'JetBrains Mono',monospace">${t}</div>
+    </div><div class="lockup-label"><span>${t}</span></div></div>`;
+  }).join('');
+
+  // Icons
+  document.getElementById('iconRow').innerHTML = [128,96,64,48,32,24,16].map(s => `
+    <div class="icon-box">${img(s, false)}<span>${s}px</span></div>
+  `).join('') + `
+    <div class="icon-box" style="background:#fff">
+      ${img(64, true)}<span style="color:#999">Inverted</span>
+    </div>
+    <div class="icon-box" style="background:#000;border:1px solid #333;border-radius:16px;padding:16px">
+      <div style="background:#111;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+        ${img(24, false)}
+        <span style="color:#ccc;font-family:${font};font-weight:500;font-size:13px;letter-spacing:0.05em">sworm</span>
+      </div>
+      <span>App Bar</span>
+    </div>
+  `;
+
+  // Banners
+  document.getElementById('bannerSection').innerHTML = `
+    <div class="banner-card">
+      <div class="banner-preview dark">
+        <div class="lockup" style="color:#fff;font-size:28px;gap:14px">
+          ${img(44, false)} ${txt('Sworm')}
+        </div>
+        <div style="color:#333;font-size:0.75rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.15em">spatial agent orchestration</div>
+      </div>
+      <div class="banner-label">Header — with tagline</div>
+    </div>
+    <div class="banner-card">
+      <div class="banner-preview dark" style="justify-content:center;padding:56px">
+        ${oTxt(56, '#fff')}
+      </div>
+      <div class="banner-label">Hero — Logo as O, centered</div>
+    </div>
+    <div class="banner-card">
+      <div class="banner-preview dark" style="justify-content:center;padding:60px;flex-direction:column;gap:12px">
+        <div class="lockup" style="color:#fff;font-size:36px;gap:16px">
+          ${img(56, false)} ${txt('Sworm')}
+        </div>
+        <div style="color:#444;font-size:0.8rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.15em">spatial agent orchestration</div>
+      </div>
+      <div class="banner-label">Landing Hero</div>
+    </div>
+    <div class="banner-card">
+      <div class="banner-preview light" style="justify-content:center;padding:60px;flex-direction:column;gap:12px">
+        <div class="lockup vertical" style="color:#000;font-size:36px">
+          ${img(80, true)} ${txt('Sworm')}
+          <div style="color:#999;font-size:0.7rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.15em;margin-top:4px">spatial agent orchestration</div>
+        </div>
+      </div>
+      <div class="banner-label">Landing Hero — Light, stacked</div>
+    </div>
+    <div class="banner-card">
+      <div class="banner-preview dark" style="padding:20px 40px;min-height:60px">
+        <div class="lockup" style="color:#fff;font-size:14px;gap:10px">
+          ${img(22, false)} ${txt('Sworm')}
+        </div>
+        <div style="display:flex;gap:24px;color:#555;font-size:0.75rem;font-family:'Inter',sans-serif">
+          <span>Docs</span><span>GitHub</span><span>Discord</span>
+        </div>
+      </div>
+      <div class="banner-label">Nav Bar</div>
+    </div>
+    <div class="banner-card">
+      <div class="banner-preview dark" style="justify-content:center;padding:48px;flex-direction:column;gap:20px">
+        <div style="color:#fff;font-family:'JetBrains Mono',monospace;font-size:14px;opacity:0.4">$</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${img(28, false)}
+          <span style="color:#fff;font-family:'JetBrains Mono',monospace;font-size:14px">sworm deploy --formation diamond --agents 5</span>
+        </div>
+        <div style="color:#555;font-family:'JetBrains Mono',monospace;font-size:12px">deploying 5 agents in diamond formation...</div>
+      </div>
+      <div class="banner-label">CLI Context — terminal branding</div>
+    </div>
+  `;
+}
+
+document.querySelectorAll('.controls .group').forEach(group => {
+  group.addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    if (e.target.dataset.font) { font = e.target.dataset.font; weight = e.target.dataset.weight; }
+    if (e.target.dataset.case) textCase = e.target.dataset.case;
+    if (e.target.dataset.spacing) spacing = e.target.dataset.spacing;
+    render();
+  });
+});
+
+render();
+
+// ==========================================
+// ANIMATED WORM — lives on the page
+// ==========================================
+(function() {
+  const canvas = document.createElement('canvas');
+  canvas.id = 'wormCanvas';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const SEG_COUNT = 45;
+  const HEAD_R = 7;
+  const TAIL_R = 2;
+  const SEG_SPACING = 6;
+
+  // Worm segments — each { x, y }
+  let segments = [];
+  let headTarget = { x: 0, y: 0 };
+  let scrollY = 0;
+  let lastScrollY = 0;
+  let scrollVel = 0;
+  let idleTime = 0;
+  let time = 0;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Build the worm path based on page geometry
+  function getPageHeight() {
+    return Math.max(document.body.scrollHeight - window.innerHeight, 1);
+  }
+
+  // Generate path points — worm snakes along margins, weaves across at sections
+  function getPathPoint(t) {
+    const W = window.innerWidth;
+    const H = document.body.scrollHeight;
+    const margin = 40;
+    const innerLeft = margin;
+    const innerRight = W - margin;
+
+    // Normalize t to 0-1 range
+    t = Math.max(0, Math.min(1, t));
+
+    // Define waypoints: [t, x, y-fraction-of-page]
+    // The worm starts top-right, weaves across at each section, alternating sides
+    const waypoints = [
+      [0.00, innerRight, 0.00],
+      [0.05, innerRight, 0.04],
+      [0.10, innerLeft,  0.08],   // weave left
+      [0.15, innerLeft,  0.15],
+      [0.22, innerRight, 0.22],   // weave right
+      [0.28, innerRight, 0.30],
+      [0.35, innerLeft,  0.36],   // weave left
+      [0.42, innerLeft,  0.44],
+      [0.50, innerRight, 0.50],   // weave right
+      [0.57, innerRight, 0.58],
+      [0.64, innerLeft,  0.64],   // weave left
+      [0.70, innerLeft,  0.72],
+      [0.78, innerRight, 0.78],   // weave right
+      [0.85, innerRight, 0.86],
+      [0.92, innerLeft,  0.92],   // weave left
+      [1.00, innerLeft,  1.00],
+    ];
+
+    // Find which segment we're in
+    let i = 0;
+    for (let j = 0; j < waypoints.length - 1; j++) {
+      if (t >= waypoints[j][0] && t <= waypoints[j + 1][0]) { i = j; break; }
+    }
+    if (t >= waypoints[waypoints.length - 1][0]) i = waypoints.length - 2;
+
+    const [t0, x0, y0f] = waypoints[i];
+    const [t1, x1, y1f] = waypoints[i + 1];
+
+    const localT = (t - t0) / (t1 - t0);
+    // Smooth easing
+    const ease = localT * localT * (3 - 2 * localT);
+
+    // Bezier-like curve: add a control point offset for the weave
+    const midX = (x0 + x1) / 2;
+    const cpX = Math.abs(x1 - x0) > W * 0.3
+      ? midX  // weaving across — go straight through middle
+      : (x0 === innerLeft ? innerLeft - 20 : innerRight + 20); // hugging margin — curve outward slightly
+
+    const bx = (1 - ease) * (1 - ease) * x0 + 2 * (1 - ease) * ease * cpX + ease * ease * x1;
+    const by = ((1 - ease) * y0f + ease * y1f) * H;
+
+    return { x: bx, y: by };
+  }
+
+  // Convert page-space Y to screen-space Y
+  function pageToScreen(px, py) {
+    return { x: px, y: py - window.scrollY };
+  }
+
+  // Initialize segments
+  function initSegments() {
+    const p = pageToScreen(getPathPoint(0).x, getPathPoint(0).y);
+    segments = [];
+    for (let i = 0; i < SEG_COUNT; i++) {
+      segments.push({ x: p.x, y: p.y });
+    }
+  }
+  initSegments();
+
+  // Scroll tracking
+  window.addEventListener('scroll', () => {
+    scrollY = window.scrollY;
+    idleTime = 0;
+  }, { passive: true });
+
+  function update(dt) {
+    time += dt;
+    const pageH = getPageHeight();
+    const scrollT = pageH > 0 ? scrollY / pageH : 0;
+
+    // Smooth scroll velocity
+    scrollVel = scrollVel * 0.9 + (scrollY - lastScrollY) * 0.1;
+    lastScrollY = scrollY;
+
+    // Head target from path
+    const pathPt = getPathPoint(scrollT);
+    const screenPt = pageToScreen(pathPt.x, pathPt.y);
+
+    // Idle sway
+    idleTime += dt;
+    const swayX = Math.sin(time * 1.5) * 12 * Math.min(idleTime * 0.5, 1);
+    const swayY = Math.cos(time * 1.1) * 8 * Math.min(idleTime * 0.5, 1);
+
+    headTarget.x = screenPt.x + swayX;
+    headTarget.y = screenPt.y + swayY;
+
+    // Move head toward target
+    segments[0].x += (headTarget.x - segments[0].x) * 0.12;
+    segments[0].y += (headTarget.y - segments[0].y) * 0.12;
+
+    // Each segment follows the previous
+    for (let i = 1; i < SEG_COUNT; i++) {
+      const prev = segments[i - 1];
+      const curr = segments[i];
+      const dx = prev.x - curr.x;
+      const dy = prev.y - curr.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > SEG_SPACING) {
+        const ratio = SEG_SPACING / dist;
+        curr.x = prev.x - dx * ratio;
+        curr.y = prev.y - dy * ratio;
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw segments from tail to head
+    for (let i = SEG_COUNT - 1; i >= 0; i--) {
+      const t = i / (SEG_COUNT - 1); // 0 = head, 1 = tail
+      const r = HEAD_R * (1 - t) + TAIL_R * t;
+      const alpha = 0.85 * (1 - t * 0.7);
+
+      ctx.beginPath();
+      ctx.arc(segments[i].x, segments[i].y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.fill();
+    }
+
+    // Draw eyes on head
+    if (segments.length >= 2) {
+      const head = segments[0];
+      const neck = segments[1];
+      const angle = Math.atan2(head.y - neck.y, head.x - neck.x);
+
+      const eyeOffset = HEAD_R * 0.45;
+      const eyeForward = HEAD_R * 0.35;
+      const eyeR = 2;
+
+      for (let side = -1; side <= 1; side += 2) {
+        const ex = head.x + Math.cos(angle) * eyeForward + Math.cos(angle + Math.PI / 2) * side * eyeOffset;
+        const ey = head.y + Math.sin(angle) * eyeForward + Math.sin(angle + Math.PI / 2) * side * eyeOffset;
+        ctx.beginPath();
+        ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      }
+    }
+  }
+
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
