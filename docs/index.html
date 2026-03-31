@@ -334,7 +334,7 @@
 
   <!-- hero -->
   <div class="hero">
-    <img src="sworm-icon.png" alt="sworm" class="hero-logo">
+    <div style="width:80px;height:80px;margin-bottom:24px" id="logoPlaceholder"></div>
     <div class="hero-wordmark">sworm</div>
     <div class="hero-tagline">spatial agent orchestration</div>
   </div>
@@ -481,31 +481,58 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- Smooth path using cosine easing between margins ---
-    // No spline math — just smooth sine-wave crossing pattern
+    // --- Path: starts at hero center, then sine wave along margins ---
     function getPathPoint(t) {
       const W = innerWidth, H = document.body.scrollHeight;
       const L = 20, R = W - 20;
+      const cx = W / 2; // center x
       t = Math.max(0, Math.min(1, t));
 
-      // The worm follows a sine wave horizontally while descending
-      // ~3 full crossings over the page. Cosine = perfectly smooth, zero sharp turns
-      const crossings = 3; // number of full left-right-left cycles
+      // Hero occupies roughly first 15% of the page
+      // The logo placeholder is at the center of the hero
+      const heroEnd = 0.08; // transition zone
+
+      if (t <= heroEnd) {
+        // Worm sits at hero center, then eases toward first margin position
+        const ease = t / heroEnd; // 0→1
+        const smooth = ease * ease * (3 - 2 * ease); // smoothstep
+        // Target: start of the sine wave at t=heroEnd
+        const crossings = 3;
+        const phase = heroEnd * crossings * Math.PI;
+        const sineX = (R + L) / 2 + ((R - L) / 2) * Math.cos(phase);
+        const sineY = heroEnd * H;
+        // Blend from center to sine start
+        const x = cx + (sineX - cx) * smooth;
+        const y = heroEnd * H * smooth; // rise from hero position
+        return { x: x, y: y };
+      }
+
+      // Main path: smooth cosine wave along margins
+      const crossings = 3;
       const phase = t * crossings * Math.PI;
-      // cos goes 1 → -1 → 1, map to R → L → R
       const x = (R + L) / 2 + ((R - L) / 2) * Math.cos(phase);
       const y = t * H;
 
       return { x: x, y: y };
     }
 
+    // Get hero center position for initial worm placement
+    function getHeroCenter() {
+      const el = document.getElementById('logoPlaceholder');
+      if (!el) return { x: innerWidth / 2, y: innerHeight * 0.3 };
+      const rect = el.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+
     function toScreen(px, py) {
       return { x: px, y: py - window.scrollY };
     }
 
-    // --- Init segments ---
-    const p0 = toScreen(getPathPoint(0).x, getPathPoint(0).y);
-    for (let i = 0; i < SEG; i++) segments.push({ x: p0.x, y: p0.y });
+    // --- Init segments at hero center ---
+    // Place all segments at center of screen initially (worm = logo)
+    const initX = innerWidth / 2;
+    const initY = innerHeight * 0.3;
+    for (let i = 0; i < SEG; i++) segments.push({ x: initX, y: initY });
 
     window.addEventListener('scroll', function() {
       scrollY = window.scrollY;
@@ -548,16 +575,27 @@
       // Smooth scroll position — worm lags behind your scroll
       smoothScrollT += (targetT - smoothScrollT) * 0.06;
 
+      // How much we've scrolled (0 = at top, 1 = fully moving)
+      const awakeness = Math.min(smoothScrollT / 0.05, 1);
+      const awakeSmooth = awakeness * awakeness * (3 - 2 * awakeness);
+
       const pp = getPathPoint(smoothScrollT);
       const sp = toScreen(pp.x, pp.y);
 
+      // Hero center (where the worm rests as the "logo")
+      const hero = getHeroCenter();
+
+      // Blend between coiled logo position and path position
+      const targetX = hero.x + (sp.x - hero.x) * awakeSmooth;
+      const targetY = hero.y + (sp.y - hero.y) * awakeSmooth;
+
       // Gentle idle sway
       const idleFactor = Math.min(idleTime * 0.3, 1);
-      const swayX = Math.sin(time * 1.2) * 6 * idleFactor;
-      const swayY = Math.cos(time * 0.9) * 4 * idleFactor;
+      const swayX = Math.sin(time * 1.2) * 6 * idleFactor * awakeSmooth;
+      const swayY = Math.cos(time * 0.9) * 4 * idleFactor * awakeSmooth;
 
-      headTarget.x = sp.x + swayX;
-      headTarget.y = sp.y + swayY;
+      headTarget.x = targetX + swayX;
+      headTarget.y = targetY + swayY;
 
       // Head follows smoothed target
       segments[0].x += (headTarget.x - segments[0].x) * 0.15;
@@ -575,19 +613,30 @@
         smoothHeadAngle += diff * 0.1;
       }
 
-      // Simple follow chain — no undulation forces, just constraint
+      // Follow chain — when coiled (awakeness=0), segments spiral around center
       for (let i = 1; i < SEG; i++) {
-        const prev = segments[i-1];
-        const curr = segments[i];
-        const dx = prev.x - curr.x;
-        const dy = prev.y - curr.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        // Coiled position: spiral around hero center
+        const coilAngle = time * 0.3 + (i / SEG) * Math.PI * 4;
+        const coilRadius = (i / SEG) * 30;
+        const coilX = hero.x + Math.cos(coilAngle) * coilRadius;
+        const coilY = hero.y + Math.sin(coilAngle) * coilRadius;
 
+        // Chain-follow position (normal worm behavior)
+        const prev = segments[i-1];
+        let chainX = segments[i].x;
+        let chainY = segments[i].y;
+        const dx = prev.x - chainX;
+        const dy = prev.y - chainY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > BASE_SPACING) {
           const ratio = BASE_SPACING / dist;
-          curr.x = prev.x - dx * ratio;
-          curr.y = prev.y - dy * ratio;
+          chainX = prev.x - dx * ratio;
+          chainY = prev.y - dy * ratio;
         }
+
+        // Blend between coiled and chain-following based on awakeness
+        segments[i].x = coilX + (chainX - coilX) * awakeSmooth;
+        segments[i].y = coilY + (chainY - coilY) * awakeSmooth;
       }
     }
 
