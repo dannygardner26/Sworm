@@ -65,7 +65,7 @@ function initHotkeys(): void {
   _hotkeyManager = new HotkeyManager();
   const swarm = getSwarm();
 
-  _hotkeyManager.onAction(async (action, args) => {
+  _hotkeyManager.onAction(async (action, _eventType, args) => {
     try {
       switch (action) {
         case 'toggle-visibility':

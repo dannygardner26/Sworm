@@ -9,6 +9,7 @@ export const KeybindingSchema = z.object({
   key: z.string(), // e.g., "ctrl+shift+s"
   action: z.string(), // e.g., "toggle-visibility"
   args: z.record(z.string(), z.unknown()).optional(),
+  mode: z.enum(['press', 'hold']).default('press').optional(),
 });
 export type Keybinding = z.infer<typeof KeybindingSchema>;
 
@@ -17,6 +18,8 @@ export const KeybindingsConfigSchema = z.object({
   bindings: z.array(KeybindingSchema),
 });
 export type KeybindingsConfig = z.infer<typeof KeybindingsConfigSchema>;
+
+export type HotkeyEventType = 'press' | 'hold-start' | 'hold-end';
 
 // Win32 modifier constants
 export const MOD_ALT = 0x0001;
@@ -75,6 +78,7 @@ export const VK_MAP: Record<string, number> = {
   enter: 0x0d,
   escape: 0x1b,
   tab: 0x09,
+  '`': 0xc0,
 };
 
 export function parseKeyCombo(key: string): { modifiers: number; vk: number } {
@@ -111,4 +115,44 @@ export function parseKeyCombo(key: string): { modifiers: number; vk: number } {
 
   if (vk === 0) throw new Error(`No key specified in combo: ${key}`);
   return { modifiers: modifiers | MOD_NOREPEAT, vk };
+}
+
+// Modifier name → [left VK, right VK]
+const MODIFIER_VK_PAIRS: Record<string, [number, number]> = {
+  ctrl: [0xa2, 0xa3], // VK_LCONTROL, VK_RCONTROL
+  control: [0xa2, 0xa3],
+  shift: [0xa0, 0xa1], // VK_LSHIFT, VK_RSHIFT
+  alt: [0xa4, 0xa5], // VK_LMENU, VK_RMENU
+  win: [0x5b, 0x5c], // VK_LWIN, VK_RWIN
+  super: [0x5b, 0x5c],
+};
+
+export function parseKeyComboRaw(key: string): {
+  keys: number[];
+  modifierKeys: [number, number][];
+} {
+  const parts = key
+    .toLowerCase()
+    .split('+')
+    .map((p) => p.trim());
+
+  const keys: number[] = [];
+  const modifierKeys: [number, number][] = [];
+
+  for (const part of parts) {
+    const modPair = MODIFIER_VK_PAIRS[part];
+    if (modPair) {
+      modifierKeys.push(modPair);
+    } else {
+      const code = VK_MAP[part];
+      if (code !== undefined) {
+        keys.push(code);
+      } else {
+        throw new Error(`Unknown key: ${part}`);
+      }
+    }
+  }
+
+  if (keys.length === 0) throw new Error(`No non-modifier key specified in combo: ${key}`);
+  return { keys, modifierKeys };
 }
