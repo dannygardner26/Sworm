@@ -480,30 +480,116 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- Path ---
+    // --- Path with many pivot points for rich curves ---
+    // Uses Catmull-Rom through waypoints for smooth S-curves
     function getPathPoint(t) {
-      const W = innerWidth, H = document.body.scrollHeight, m = 50;
+      const W = innerWidth, H = document.body.scrollHeight;
+      const m = 20; // margin — keep worm at edges, away from content
       const L = m, R = W - m;
+      const M = W * 0.5; // page center
+      const ML = W * 0.3; // inner-left
+      const MR = W * 0.7; // inner-right
       t = Math.max(0, Math.min(1, t));
+
+      // Dense waypoints — lots of pivots for rich, curvy motion
+      // Each: [t-fraction, x, y-fraction-of-page]
       const wp = [
-        {t:0,x:R,yf:0},{t:.05,x:R,yf:.04},{t:.10,x:L,yf:.08},{t:.15,x:L,yf:.15},
-        {t:.22,x:R,yf:.22},{t:.28,x:R,yf:.30},{t:.35,x:L,yf:.36},{t:.42,x:L,yf:.44},
-        {t:.50,x:R,yf:.50},{t:.57,x:R,yf:.58},{t:.64,x:L,yf:.64},{t:.70,x:L,yf:.72},
-        {t:.78,x:R,yf:.78},{t:.85,x:R,yf:.86},{t:.92,x:L,yf:.92},{t:1,x:L,yf:1}
+        // Start top-right, S-curve down right margin
+        [0.000, R,  0.00],
+        [0.015, R+10, 0.015],
+        [0.030, R,  0.03],
+        [0.045, R-15, 0.05],
+        [0.060, R,  0.065],
+        // Weave across to left
+        [0.080, MR, 0.08],
+        [0.095, M,  0.085],
+        [0.110, ML, 0.09],
+        [0.130, L,  0.10],
+        // S-curve down left margin
+        [0.150, L-10, 0.12],
+        [0.165, L,  0.14],
+        [0.180, L+12, 0.155],
+        [0.195, L,  0.17],
+        [0.210, L-8, 0.19],
+        // Weave across to right
+        [0.230, ML, 0.20],
+        [0.245, M,  0.21],
+        [0.260, MR, 0.22],
+        [0.280, R,  0.24],
+        // S-curve down right margin
+        [0.300, R+8, 0.26],
+        [0.315, R,  0.28],
+        [0.330, R-10, 0.295],
+        [0.345, R,  0.31],
+        // Weave left with a loop
+        [0.365, MR, 0.33],
+        [0.380, M+20, 0.34],
+        [0.395, M-20, 0.345],
+        [0.410, ML, 0.35],
+        [0.430, L,  0.37],
+        // Down left with tight S
+        [0.445, L+15, 0.39],
+        [0.460, L-5, 0.41],
+        [0.475, L+10, 0.43],
+        [0.490, L,  0.45],
+        // Weave right
+        [0.510, ML, 0.47],
+        [0.525, M,  0.48],
+        [0.540, MR, 0.49],
+        [0.560, R,  0.51],
+        // Down right
+        [0.575, R-12, 0.53],
+        [0.590, R+5, 0.55],
+        [0.605, R,  0.57],
+        // Weave left
+        [0.625, MR, 0.59],
+        [0.640, M,  0.60],
+        [0.655, ML, 0.61],
+        [0.675, L,  0.63],
+        // Down left
+        [0.690, L+8, 0.65],
+        [0.705, L,  0.67],
+        [0.720, L-10, 0.69],
+        [0.735, L,  0.71],
+        // Weave right
+        [0.755, ML, 0.73],
+        [0.770, M,  0.74],
+        [0.785, MR, 0.75],
+        [0.805, R,  0.77],
+        // Down right with S
+        [0.820, R+10, 0.79],
+        [0.835, R-8, 0.81],
+        [0.850, R,  0.83],
+        // Weave left to finish
+        [0.870, MR, 0.85],
+        [0.885, M,  0.87],
+        [0.900, ML, 0.89],
+        [0.920, L,  0.91],
+        // Final S-curve down left
+        [0.940, L+12, 0.93],
+        [0.955, L,  0.95],
+        [0.975, L-5, 0.97],
+        [1.000, L,  1.00],
       ];
+
+      // Find segment
       let i = 0;
       for (let j = 0; j < wp.length - 1; j++) {
-        if (t >= wp[j].t && t <= wp[j+1].t) { i = j; break; }
+        if (t >= wp[j][0] && t <= wp[j+1][0]) { i = j; break; }
       }
-      if (t >= wp[wp.length-1].t) i = wp.length - 2;
-      const a = wp[i], b = wp[i+1];
-      const lt = (t - a.t) / (b.t - a.t);
-      const e = lt * lt * (3 - 2 * lt);
-      const mx = (a.x + b.x) / 2;
-      const cpX = Math.abs(b.x - a.x) > W * 0.3 ? mx : (a.x === L ? L - 20 : R + 20);
+      if (t >= wp[wp.length-1][0]) i = wp.length - 2;
+
+      // Catmull-Rom through 4 neighboring waypoints
+      const i0 = Math.max(0, i - 1);
+      const i1 = i;
+      const i2 = Math.min(wp.length - 1, i + 1);
+      const i3 = Math.min(wp.length - 1, i + 2);
+
+      const lt = (t - wp[i1][0]) / (wp[i2][0] - wp[i1][0]);
+
       return {
-        x: (1-e)*(1-e)*a.x + 2*(1-e)*e*cpX + e*e*b.x,
-        y: ((1-e)*a.yf + e*b.yf) * H
+        x: catmullRom(wp[i0][1], wp[i1][1], wp[i2][1], wp[i3][1], lt),
+        y: catmullRom(wp[i0][2], wp[i1][2], wp[i2][2], wp[i3][2], lt) * H
       };
     }
 
@@ -555,17 +641,17 @@
       const pp = getPathPoint(sT);
       const sp = toScreen(pp.x, pp.y);
 
-      // Gentle idle sway only
-      const idleFactor = Math.min(idleTime * 0.5, 1);
-      const swayX = Math.sin(time * 0.6) * 4 * idleFactor;
-      const swayY = Math.cos(time * 0.4) * 3 * idleFactor;
+      // Gentle idle sway
+      const idleFactor = Math.min(idleTime * 0.3, 1);
+      const swayX = Math.sin(time * 1.2) * 6 * idleFactor;
+      const swayY = Math.cos(time * 0.9) * 4 * idleFactor;
 
       headTarget.x = sp.x + swayX;
       headTarget.y = sp.y + swayY;
 
-      // Very slow, smooth head tracking — like drifting through water
-      segments[0].x += (headTarget.x - segments[0].x) * 0.04;
-      segments[0].y += (headTarget.y - segments[0].y) * 0.04;
+      // Responsive head tracking
+      segments[0].x += (headTarget.x - segments[0].x) * 0.12;
+      segments[0].y += (headTarget.y - segments[0].y) * 0.12;
 
       // Smooth head angle
       if (segments.length >= 2) {
@@ -576,7 +662,7 @@
         let diff = targetAngle - smoothHeadAngle;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
-        smoothHeadAngle += diff * 0.05;
+        smoothHeadAngle += diff * 0.1;
       }
 
       // Simple follow chain — no undulation forces, just constraint
