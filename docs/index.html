@@ -513,14 +513,6 @@
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
 
-    // Get logo center position
-    function getLogoCenter() {
-      const el = document.getElementById('heroLogo');
-      if (!el) return { x: innerWidth / 2, y: innerHeight * 0.3 };
-      const rect = el.getBoundingClientRect();
-      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    }
-
     function toScreen(px, py) {
       return { x: px, y: py - window.scrollY };
     }
