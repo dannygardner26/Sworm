@@ -6,3 +6,14 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# Logo exploration artifacts (keep only sworm-icon.png)
+logos/v*_*.png
+logos/logo_*.png
+logos/final_*.png
+logos/clean_*.png
+logos/sworm-logo.png
+logos/logo_data.json
+
+# Claude Code
+.claude/
