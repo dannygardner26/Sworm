@@ -488,11 +488,22 @@
       const L = 20, R = W - 20;
       t = Math.max(0, Math.min(1, t));
 
-      // Worm path: smooth cosine wave along margins, starting from right side
-      const crossings = 3;
-      const phase = t * crossings * Math.PI;
-      const x = (R + L) / 2 + ((R - L) / 2) * Math.cos(phase);
-      const y = t * H;
+      // First 5% — ease from page center out to the right margin
+      const cx = W / 2;
+      const emergeEnd = 0.05;
+      let x, y;
+      if (t < emergeEnd) {
+        const e = t / emergeEnd;
+        const smooth = e * e * (3 - 2 * e);
+        x = cx + (R - cx) * smooth;
+        y = t * H;
+      } else {
+        // Main path: smooth cosine wave along margins
+        const crossings = 3;
+        const phase = t * crossings * Math.PI;
+        x = (R + L) / 2 + ((R - L) / 2) * Math.cos(phase);
+        y = t * H;
+      }
 
       return { x: x, y: y };
     }
@@ -509,9 +520,9 @@
       return { x: px, y: py - window.scrollY };
     }
 
-    // --- Init segments at path start (right margin, top) ---
-    const initX = innerWidth - 20;
-    const initY = 0;
+    // --- Init all segments at logo center (hidden inside logo) ---
+    const initX = innerWidth / 2;
+    const initY = innerHeight * 0.3;
     for (let i = 0; i < SEG; i++) segments.push({ x: initX, y: initY });
 
     window.addEventListener('scroll', function() {
@@ -555,18 +566,20 @@
       // Smooth scroll position — worm lags behind your scroll
       smoothScrollT += (targetT - smoothScrollT) * 0.06;
 
-      // How much we've scrolled (0 = at top, 1 = fully crawling)
-      const awakeness = Math.min(smoothScrollT / 0.04, 1);
-      const awake = awakeness * awakeness * (3 - 2 * awakeness);
-
       const pp = getPathPoint(smoothScrollT);
       const sp = toScreen(pp.x, pp.y);
       const logo = getLogoCenter();
 
-      // Gentle idle sway (only when crawling)
+      // How many segments have "emerged" from the logo
+      // At scroll=0, none are out. As you scroll, segments peel away one by one.
+      // Full emergence after ~8% scroll.
+      const emergeProgress = Math.min(smoothScrollT / 0.08, 1);
+      const segmentsOut = Math.floor(emergeProgress * SEG);
+
+      // Gentle idle sway
       const idleFactor = Math.min(idleTime * 0.3, 1);
-      const swayX = Math.sin(time * 1.2) * 6 * idleFactor * awake;
-      const swayY = Math.cos(time * 0.9) * 4 * idleFactor * awake;
+      const swayX = Math.sin(time * 1.2) * 6 * idleFactor;
+      const swayY = Math.cos(time * 0.9) * 4 * idleFactor;
 
       headTarget.x = sp.x + swayX;
       headTarget.y = sp.y + swayY;
@@ -587,21 +600,29 @@
         smoothHeadAngle += diff * 0.1;
       }
 
-      // Follow chain
+      // Follow chain — emerged segments follow normally,
+      // anchored segments stay pinned to logo center
       for (let i = 1; i < SEG; i++) {
-        const prev = segments[i-1];
-        const dx = prev.x - segments[i].x;
-        const dy = prev.y - segments[i].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > BASE_SPACING) {
-          const ratio = BASE_SPACING / dist;
-          segments[i].x = prev.x - dx * ratio;
-          segments[i].y = prev.y - dy * ratio;
+        if (i < segmentsOut) {
+          // This segment has emerged — normal chain follow
+          const prev = segments[i-1];
+          const dx = prev.x - segments[i].x;
+          const dy = prev.y - segments[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > BASE_SPACING) {
+            const ratio = BASE_SPACING / dist;
+            segments[i].x = prev.x - dx * ratio;
+            segments[i].y = prev.y - dy * ratio;
+          }
+        } else {
+          // Still inside the logo — anchor to logo center
+          segments[i].x += (logo.x - segments[i].x) * 0.2;
+          segments[i].y += (logo.y - segments[i].y) * 0.2;
         }
       }
 
-      // Worm opacity — hidden at top, fades in as you scroll
-      wormOpacity = awake;
+      // Worm visible as soon as any segments have emerged
+      wormOpacity = segmentsOut > 2 ? 1 : 0;
     }
 
     // --- Draw ---
@@ -611,7 +632,6 @@
       ctx.clearRect(0, 0, innerWidth, innerHeight);
 
       if (segments.length < 3 || wormOpacity < 0.01) { ctx.restore(); return; }
-      ctx.globalAlpha = wormOpacity;
 
       // Build smooth body outline using Catmull-Rom spline
       const leftEdge = [];
