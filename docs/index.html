@@ -463,6 +463,7 @@
     let headTarget = { x: 0, y: 0 };
     let scrollY = 0;
     let prevScrollY = 0;
+    let smoothScrollT = 0; // lags behind actual scroll position
     let scrollVel = 0;
     let smoothScrollVel = 0;
     let idleTime = 0;
@@ -542,8 +543,12 @@
       prevScrollY = scrollY;
 
       const pageH = Math.max(document.body.scrollHeight - innerHeight, 1);
-      const sT = scrollY / pageH;
-      const pp = getPathPoint(sT);
+      const targetT = scrollY / pageH;
+
+      // Smooth scroll position — worm lags behind your scroll
+      smoothScrollT += (targetT - smoothScrollT) * 0.06;
+
+      const pp = getPathPoint(smoothScrollT);
       const sp = toScreen(pp.x, pp.y);
 
       // Gentle idle sway
@@ -554,9 +559,9 @@
       headTarget.x = sp.x + swayX;
       headTarget.y = sp.y + swayY;
 
-      // Responsive head tracking
-      segments[0].x += (headTarget.x - segments[0].x) * 0.12;
-      segments[0].y += (headTarget.y - segments[0].y) * 0.12;
+      // Head follows smoothed target
+      segments[0].x += (headTarget.x - segments[0].x) * 0.15;
+      segments[0].y += (headTarget.y - segments[0].y) * 0.15;
 
       // Smooth head angle
       if (segments.length >= 2) {
