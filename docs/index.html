@@ -516,12 +516,16 @@
       return { x: px, y: py - window.scrollY };
     }
 
-    // --- Init segments spread along path start so worm is visible immediately ---
+    // --- Init segments in a circle around logo center ---
+    const initCx = innerWidth / 2;
+    const initCy = innerHeight * 0.3;
+    const initR = 60;
     for (let i = 0; i < SEG; i++) {
-      const t = (i * BASE_SPACING) / (document.body.scrollHeight || 3000);
-      const p = getPathPoint(0);
-      const sp = toScreen(p.x, p.y);
-      segments.push({ x: sp.x, y: sp.y + i * BASE_SPACING });
+      const a = -(i / SEG) * Math.PI * 2;
+      segments.push({
+        x: initCx + Math.cos(a) * initR,
+        y: initCy + Math.sin(a) * initR
+      });
     }
 
     window.addEventListener('scroll', function() {
@@ -569,19 +573,22 @@
       const sp = toScreen(pp.x, pp.y);
       const logo = getLogoCenter();
 
-      // How many segments have "emerged" from the logo
-      // At scroll=0, none are out. As you scroll, segments peel away one by one.
-      // Full emergence after ~8% scroll.
-      const emergeProgress = Math.min(smoothScrollT / 0.08, 1);
-      const segmentsOut = Math.floor(emergeProgress * SEG);
+      // Blend: 0 = orbiting logo, 1 = following scroll path
+      const scrollBlend = Math.min(smoothScrollT / 0.06, 1);
+      const blend = scrollBlend * scrollBlend * (3 - 2 * scrollBlend);
 
-      // Gentle idle sway
-      const idleFactor = Math.min(idleTime * 0.3, 1);
-      const swayX = Math.sin(time * 1.2) * 6 * idleFactor;
-      const swayY = Math.cos(time * 0.9) * 4 * idleFactor;
+      // Orbit around logo (radius ~60px, slow rotation)
+      const orbitR = 60;
+      const orbitAngle = time * 0.6;
+      const orbitX = logo.x + Math.cos(orbitAngle) * orbitR;
+      const orbitY = logo.y + Math.sin(orbitAngle) * orbitR;
 
-      headTarget.x = sp.x + swayX;
-      headTarget.y = sp.y + swayY;
+      // Blend between orbit and scroll path
+      const targetX = orbitX + (sp.x - orbitX) * blend;
+      const targetY = orbitY + (sp.y - orbitY) * blend;
+
+      headTarget.x = targetX;
+      headTarget.y = targetY;
 
       // Head follows path target
       segments[0].x += (headTarget.x - segments[0].x) * 0.15;
