@@ -2,14 +2,22 @@
  * Sworm — Electron Main Process
  * Spawns PTY server as child process (system Node) to avoid ABI mismatch.
  */
-import { app, BrowserWindow, ipcMain, globalShortcut, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Menu, nativeImage } from 'electron';
 import { spawn, execSync, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
-import { existsSync, writeFileSync, unlinkSync, mkdtempSync } from 'node:fs';
+import { existsSync, writeFileSync, readFileSync, unlinkSync, mkdtempSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
+const LOG_PATH = join(tmpdir(), 'sworm-debug.log');
+function log(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  console.log(line);
+  try { appendFileSync(LOG_PATH, line + '\n'); } catch {}
+}
+
+log('[Sworm] Main process starting...');
 let mainWindow: BrowserWindow | null = null;
 let ptyProcess: ReturnType<typeof spawn> | null = null;
 let paneCounter = 0;
@@ -38,7 +46,7 @@ function startPtyServer() {
       const msg = JSON.parse(line);
       switch (msg.type) {
         case 'ready':
-          console.log('[Sworm] PTY server ready');
+          log('[Sworm] PTY server ready');
           break;
         case 'created': {
           const resolve = pending.get(`create:${msg.id}`);
@@ -73,15 +81,25 @@ function sendToPty(msg: any) {
 }
 
 function createWindow() {
+  // Load icon from multiple possible locations
+  const iconPaths = [
+    join(__dirname, 'sworm-icon.ico'),
+    join(__dirname, '..', 'app', 'sworm-icon.ico'),
+    join(__dirname, '..', 'logos', 'sworm-icon.png'),
+  ];
+  const iconPath = iconPaths.find(p => existsSync(p)) || iconPaths[0];
+  const appIcon = nativeImage.createFromPath(iconPath);
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     frame: false,
+    icon: appIcon,
     backgroundColor: '#0a0a0a',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#1a1a1a',
-      symbolColor: '#888',
+      color: '#0a0a0a',
+      symbolColor: '#333',
       height: 32,
     },
     webPreferences: {
@@ -245,203 +263,266 @@ ipcMain.handle('settings:write', (_event, settings: any) => {
   }
 });
 
-// ─── Voice Activation ──────────────────────────────────────
+// ─── Voice (local whisper transcription) ─────────────────
 
 let voiceRecording = false;
+let voiceRecordStart = 0;
 let voiceProcess: ReturnType<typeof spawn> | null = null;
-let currentWavPath: string | null = null;
 const voiceTempDir = mkdtempSync(join(tmpdir(), 'sworm-voice-'));
-const WHISPER_PATH = join(homedir(), '.sworm', 'voice', 'whisper-cli.exe');
-const MODEL_PATH = join(homedir(), '.sworm', 'voice', 'models', 'ggml-tiny.en.bin');
+const WHISPER_DIR = join(homedir(), '.sworm', 'voice');
+const WHISPER_PATH = join(WHISPER_DIR, 'whisper-cli.exe');
+const MODEL_PATH = join(WHISPER_DIR, 'models', 'ggml-tiny.en.bin');
 
 let cachedMicName: string | null = null;
 function getDefaultMic(): string {
   if (cachedMicName) return cachedMicName;
   try {
-    const result = spawnSync('ffmpeg', ['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'], {
-      timeout: 5000,
-    });
+    const result = spawnSync('ffmpeg', ['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'], { timeout: 5000 });
     const output = result.stderr?.toString() || '';
     const match = output.match(/"([^"]+)"\s*\(audio\)/);
-    if (match) {
-      cachedMicName = match[1];
-      return cachedMicName;
-    }
+    if (match) { cachedMicName = match[1]; return cachedMicName; }
   } catch {}
   return 'Microphone';
 }
 
-function isWhisperReady(): boolean {
-  return existsSync(WHISPER_PATH) && existsSync(MODEL_PATH);
-}
-
 function startVoiceRecording() {
-  if (voiceRecording) return; // Use toggleVoice for toggle behavior
-
-  if (!isWhisperReady()) {
-    mainWindow?.webContents.send('voice:status', 'error', 'Whisper not set up. Run: sworm voice setup');
+  if (voiceRecording) return;
+  if (!existsSync(WHISPER_PATH) || !existsSync(MODEL_PATH)) {
+    mainWindow?.webContents.send('voice:status', 'error', 'Whisper not set up');
     return;
   }
 
   voiceRecording = true;
-  mainWindow?.webContents.send('voice:status', 'listening', '');
-  console.log('[Voice] Recording...');
-
+  voiceRecordStart = Date.now();
   const wavPath = join(voiceTempDir, `voice-${Date.now()}.wav`);
-  currentWavPath = wavPath;
-  const micName = getDefaultMic();
+  mainWindow?.webContents.send('voice:status', 'listening', '');
+  log('[Voice] Recording...');
 
+  const micName = getDefaultMic();
   voiceProcess = spawn('ffmpeg', [
-    '-f', 'dshow',
-    '-i', `audio=${micName}`,
-    '-ar', '16000',
-    '-ac', '1',
-    '-t', '8',
-    '-y',
-    wavPath,
+    '-f', 'dshow', '-i', `audio=${micName}`,
+    '-ar', '16000', '-ac', '1', '-y', wavPath,
   ], { stdio: ['pipe', 'pipe', 'pipe'] });
 
-  voiceProcess.on('close', () => {
-    if (currentWavPath) {
-      const path = currentWavPath;
-      currentWavPath = null;
-      voiceRecording = false;
-      transcribeAndExecute(path);
-    } else {
-      voiceRecording = false;
-      mainWindow?.webContents.send('voice:status', 'idle', '');
-    }
+  voiceProcess.on('error', (err) => {
+    log(`[Voice] FFmpeg error: ${err.message}`);
+    voiceRecording = false;
+    mainWindow?.webContents.send('voice:status', 'error', 'Mic capture failed');
   });
 
-  voiceProcess.on('error', (err) => {
-    console.error('[Voice] FFmpeg error:', err.message);
-    voiceRecording = false;
-    mainWindow?.webContents.send('voice:status', 'error', 'Mic capture failed: ' + err.message);
-  });
+  // Store path for stop handler
+  (voiceProcess as any)._wavPath = wavPath;
 }
 
 function stopVoiceRecording() {
-  if (!voiceRecording) return;
-  console.log('[Voice] Stop recording');
+  if (!voiceRecording || !voiceProcess) return;
+  voiceRecording = false;
+  log('[Voice] Stop recording');
 
-  // Send 'q' to ffmpeg to stop gracefully — this triggers the 'close' handler which transcribes
-  if (voiceProcess) {
-    try { voiceProcess.stdin?.write('q'); } catch {}
-    setTimeout(() => {
-      try { if (voiceProcess && !voiceProcess.killed) voiceProcess.kill(); } catch {}
-    }, 1000);
-  }
-}
+  const proc = voiceProcess;
+  const wavPath = (proc as any)._wavPath;
+  voiceProcess = null;
 
-/** Toggle: start if idle, stop if recording */
-function toggleVoice() {
-  if (voiceRecording) {
-    stopVoiceRecording();
-  } else {
-    startVoiceRecording();
-  }
-}
+  try { proc.stdin?.write('q'); } catch {}
 
-function transcribeAndExecute(wavPath: string) {
   mainWindow?.webContents.send('voice:status', 'processing', '');
-  console.log('[Voice] Transcribing...');
 
-  if (!existsSync(wavPath)) {
-    mainWindow?.webContents.send('voice:status', 'idle', '');
-    return;
-  }
+  // Wait for ffmpeg to finish writing, then transcribe
+  proc.on('close', () => {
+    if (!existsSync(wavPath)) {
+      mainWindow?.webContents.send('voice:status', 'error', 'No audio recorded');
+      return;
+    }
 
-  const result = spawnSync(WHISPER_PATH, [
-    '-m', MODEL_PATH,
-    '-f', wavPath,
-    '-l', 'en',
-    '--no-timestamps',
-  ], { timeout: 15000 });
+    log('[Voice] Transcribing...');
+    const result = spawnSync(WHISPER_PATH, [
+      '-m', MODEL_PATH, '-f', wavPath, '-l', 'en', '--no-timestamps',
+    ], { timeout: 15000, cwd: WHISPER_DIR });
 
-  try { unlinkSync(wavPath); } catch {}
+    try { unlinkSync(wavPath); } catch {}
+    let text = result.stdout?.toString().trim() || '';
+    text = text.replace(/\[BLANK_AUDIO\]/g, '').replace(/\(.*?\)/g, '').trim();
+    // Filter whisper hallucinations (common on silence/noise)
+    const hallucinations = /^(thank|thanks|subscribe|like|comment|share|you|bye|see you|please|okay|so|the end|\.+|\s*)$/i;
+    if (hallucinations.test(text)) text = '';
+    log(`[Voice] Result: ${text || '(empty)'}`);
 
-  let text = result.stdout?.toString().trim() || '';
-  // Strip whisper artifacts
-  text = text.replace(/\[BLANK_AUDIO\]/g, '').replace(/\(.*?\)/g, '').trim();
-  console.log('[Voice] Result:', text || '(empty)');
-
-  if (text) {
-    mainWindow?.webContents.send('voice:result', text);
-  } else {
-    mainWindow?.webContents.send('voice:status', 'error', 'No speech detected');
-    setTimeout(() => mainWindow?.webContents.send('voice:status', 'idle', ''), 2000);
-    return;
-  }
-  mainWindow?.webContents.send('voice:status', 'idle', '');
-}
-
-function registerVoiceShortcuts() {
-  // Ctrl+F9 = toggle: press to start, press again to stop
-  const cf9ok = globalShortcut.register('Ctrl+F9', () => {
-    console.log('[Voice] Ctrl+F9 toggle');
-    toggleVoice();
-  });
-  console.log('[Voice] Ctrl+F9 toggle:', cf9ok ? 'OK' : 'TAKEN');
-
-  // F9 = hold-to-talk: record while held, stop on release
-  // globalShortcut can't detect keyup, so we use before-input-event on the window
-  // AND register F9 globally to capture it even when app isn't focused
-  let f9Held = false;
-  const f9ok = globalShortcut.register('F9', () => {
-    // Global F9 keydown — start recording if not already
-    if (!f9Held) {
-      f9Held = true;
-      console.log('[Voice] F9 held (start)');
-      if (!voiceRecording) startVoiceRecording();
+    if (text) {
+      mainWindow?.webContents.send('voice:result', text);
+    } else {
+      mainWindow?.webContents.send('voice:status', 'error', 'No speech detected');
     }
   });
-  console.log('[Voice] F9 hold-to-talk:', f9ok ? 'OK' : 'TAKEN');
 
-  // Detect F9 keyup via polling — globalShortcut fires repeatedly while held,
-  // so we detect "release" when it stops firing for >200ms
-  if (f9ok) {
-    let lastF9Time = 0;
-    const origHandler = globalShortcut.isRegistered('F9');
-    // Override: track last fire time
-    globalShortcut.unregister('F9');
-    globalShortcut.register('F9', () => {
-      lastF9Time = Date.now();
-      if (!f9Held) {
-        f9Held = true;
-        console.log('[Voice] F9 held (start)');
+  setTimeout(() => { try { if (!proc.killed) proc.kill(); } catch {} }, 2000);
+}
+
+function toggleVoice() {
+  if (voiceRecording) stopVoiceRecording(); else startVoiceRecording();
+}
+
+// ─── Global Shortcuts ────────────────────────────────────
+
+function tryRegister(combos: string[], handler: () => void): string | null {
+  for (const combo of combos) {
+    const ok = globalShortcut.register(combo, handler);
+    if (ok) { log(`[Shortcut] Registered: ${combo}`); return combo; }
+    log(`[Shortcut] ${combo} TAKEN, trying next...`);
+  }
+  return null;
+}
+
+function registerGlobalShortcuts() {
+  // Toggle voice: Ctrl+Alt+V — tap to start listening, tap to stop
+  let lastToggle = 0;
+  const toggleKey = tryRegister(['Ctrl+Alt+V', 'F9'], () => {
+    const now = Date.now();
+    if (now - lastToggle < 300) return;
+    lastToggle = now;
+    log('[Voice] Toggle pressed');
+    toggleVoice();
+  });
+
+  // Push-to-talk: Alt+V — hold to record, release to stop
+  // globalShortcut fires repeatedly while held; we detect release when repeats stop
+  let pttKey: string | null = null;
+  let pttLastFire = 0;
+  let pttActive = false;
+
+  for (const combo of ['Alt+V', 'F10']) {
+    const ok = globalShortcut.register(combo, () => {
+      pttLastFire = Date.now();
+      if (!pttActive) {
+        pttActive = true;
+        log(`[Voice] PTT hold start`);
         if (!voiceRecording) startVoiceRecording();
       }
     });
-    // Poll to detect release (no repeat fires for 250ms = released)
-    setInterval(() => {
-      if (f9Held && Date.now() - lastF9Time > 250) {
-        f9Held = false;
-        console.log('[Voice] F9 released (stop)');
-        if (voiceRecording) stopVoiceRecording();
-      }
-    }, 100);
+    if (ok) {
+      pttKey = combo;
+      log(`[Shortcut] Registered PTT: ${combo}`);
+      // Poll: if no repeat fires for 300ms, key was released
+      setInterval(() => {
+        if (pttActive && Date.now() - pttLastFire > 300) {
+          pttActive = false;
+          log(`[Voice] PTT released`);
+          if (voiceRecording) stopVoiceRecording();
+        }
+      }, 50);
+      break;
+    }
+    log(`[Shortcut] ${combo} TAKEN, trying next...`);
   }
 
-  const label = (f9ok ? 'F9 hold' : '') + (f9ok && cf9ok ? ' | ' : '') + (cf9ok ? 'Ctrl+F9 toggle' : '');
-  mainWindow?.webContents.send('voice:shortcut', label || 'none');
+  // Toggle window visibility: Ctrl+`
+  const windowKey = tryRegister(
+    ['Ctrl+`', 'F8'],
+    () => {
+      if (!mainWindow) return;
+      if (mainWindow.isVisible()) { mainWindow.hide(); } else { mainWindow.show(); mainWindow.focus(); }
+    },
+  );
+
+  const parts: string[] = [];
+  if (pttKey) parts.push(`${pttKey} push-to-talk`);
+  if (toggleKey) parts.push(`${toggleKey} toggle voice`);
+  if (windowKey) parts.push(`${windowKey} toggle window`);
+  const label = parts.join(' | ') || 'no shortcuts available';
+  currentShortcutLabel = label;
+  mainWindow?.webContents.send('voice:shortcut', label);
+  log(`[Sworm] Global shortcuts: ${label}`);
   return label;
 }
 
-// IPC for voice from renderer
+let currentShortcutLabel = '';
 ipcMain.on('voice:start', () => startVoiceRecording());
 ipcMain.on('voice:stop', () => stopVoiceRecording());
+ipcMain.on('voice:ready', () => {
+  if (currentShortcutLabel) mainWindow?.webContents.send('voice:shortcut', currentShortcutLabel);
+});
+
+// ─── Brain (LLM command interpretation) ──────────────────
+
+let brain: any = null;
+
+function initBrain() {
+  try {
+  const { SwormBrain } = require('./brain');
+  const ctx = {
+    sendToPty,
+    waitForPty: (id: string) => new Promise((resolve, reject) => {
+      pending.set(`create:${id}`, resolve);
+      setTimeout(() => { pending.delete(`create:${id}`); reject(new Error('PTY timeout')); }, 10000);
+    }),
+    getPanes: () => new Promise((resolve) => {
+      if (!mainWindow) { resolve([]); return; }
+      const channel = `brain:panes-${Date.now()}`;
+      ipcMain.once(channel, (_e, panes) => resolve(panes));
+      mainWindow.webContents.send('brain:get-panes', channel);
+      setTimeout(() => resolve([]), 3000); // fallback
+    }),
+    log,
+  };
+
+  const onStatus = (type: string, detail?: string) => {
+    mainWindow?.webContents.send('brain:status', type, detail || '');
+    log(`[Brain] Status: ${type}${detail ? ' — ' + detail : ''}`);
+  };
+
+  brain = new SwormBrain(ctx, onStatus);
+  log('[Sworm] Brain initialized');
+  } catch (e) {
+    log(`[Sworm] Brain init failed (AI commands disabled): ${e}`);
+  }
+}
+
+let brainBusy = false;
+ipcMain.handle('brain:process', async (_e, text: string) => {
+  if (!brain) return { response: '', error: 'Brain not initialized' };
+  if (brainBusy) {
+    log('[Brain] Busy, dropping: ' + text);
+    return { response: '', error: 'Brain is busy processing another command' };
+  }
+  brainBusy = true;
+  try {
+    const response = await brain.process(text);
+    return { response };
+  } catch (e) {
+    return { response: '', error: String(e) };
+  } finally {
+    brainBusy = false;
+  }
+});
 
 // ─── App Lifecycle ──────────────────────────────────────────
 
-app.whenReady().then(() => {
-  // Remove default menu bar
-  Menu.setApplicationMenu(null);
+// Single instance lock — if another instance launches, focus the existing window
+const gotLock = app.requestSingleInstanceLock();
+log(`[Sworm] Single instance lock: ${gotLock}`);
+if (!gotLock) {
+  log('[Sworm] Another instance running, quitting');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 
-  startPtyServer();
-  createWindow();
-  const shortcuts = registerVoiceShortcuts();
-  console.log(`[Sworm] Voice: ${shortcuts}`);
-});
+  app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    globalShortcut.unregisterAll();
+
+    startPtyServer();
+    createWindow();
+    initBrain();
+    log('[Sworm] Window created, registering shortcuts...');
+    const shortcuts = registerGlobalShortcuts();
+    log(`[Sworm] Voice: ${shortcuts}`);
+  });
+}
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
