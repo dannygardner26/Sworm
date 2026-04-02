@@ -34,7 +34,7 @@ Examples: `feat/add-team-invites`, `fix/upload-parsing-bug`
 
 ## Pull Request Process
 
-1. Branch from `master`.
+1. Branch from `dev` (not `master`).
 2. Make your changes in a feature branch.
 3. Run tests and lint before submitting:
    ```bash
@@ -42,7 +42,9 @@ Examples: `feat/add-team-invites`, `fix/upload-parsing-bug`
    npm run lint
    ```
 4. Include a `## Summary` section in your PR description with bullet points describing the changes.
-5. Open a PR against `master` and wait for review.
+5. Open a PR against `dev` and wait for review.
+
+> **Note:** `master` is the release branch. All contributions go into `dev` first and are merged to `master` at release time.
 
 ## Code Style
 
