@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sworm — documentation</title>
+  <meta name="description" content="Documentation for sworm — spatially-aware desktop orchestration. Deploy AI agents and apps across multi-monitor setups via named formations.">
+  <link rel="icon" href="sworm-icon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 300;
+      line-height: 1.7;
+      text-transform: lowercase;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+      background: #fff;
+      color: #000;
+    }
+
+    a {
+      color: #fff;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      transition: border-color 0.2s;
+    }
+
+    a:hover {
+      border-color: #fff;
+    }
+
+    /* ——— layout ——— */
+    .page {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ——— sidebar ——— */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      padding: 32px 20px;
+      z-index: 100;
+      background: #000;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      border: none;
+    }
+
+    .sidebar-logo img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .sidebar-logo span {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+    }
+
+    .sidebar-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.2);
+      margin-bottom: 24px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 20px;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-link {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.4);
+      border: none;
+      padding: 5px 0;
+      transition: color 0.2s;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-link.active {
+      color: #fff;
+    }
+
+    /* ——— main content ——— */
+    .content {
+      margin-left: 240px;
+      flex: 1;
+      max-width: 760px;
+      padding: 48px 40px 120px;
+    }
+
+    /* ——— doc header ——— */
+    .doc-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .doc-header h1 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      margin-bottom: 8px;
+    }
+
+    .doc-header p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.15em;
+    }
+
+    /* ——— sections ——— */
+    .doc-section {
+      margin-bottom: 56px;
+      scroll-margin-top: 32px;
+    }
+
+    .doc-section h2 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .doc-section h3 {
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .doc-section p,
+    .doc-section li {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.9;
+    }
+
+    .doc-section ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 12px 0;
+    }
+
+    .doc-section ul li {
+      position: relative;
+      padding-left: 16px;
+    }
+
+    .doc-section ul li::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      color: rgba(255,255,255,0.2);
+    }
+
+    /* ——— code blocks ——— */
+    .code-block {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      overflow-x: auto;
+      font-size: 0.78rem;
+      line-height: 2;
+    }
+
+    .code-block .prompt { color: rgba(255,255,255,0.3); }
+    .code-block .cmd { color: #fff; }
+    .code-block .comment { color: rgba(255,255,255,0.2); }
+    .code-block .key { color: rgba(255,255,255,0.7); }
+    .code-block .val { color: rgba(255,255,255,0.45); }
+    .code-block .str { color: rgba(255,255,255,0.5); }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ——— tables ——— */
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.75rem;
+    }
+
+    .doc-table th {
+      text-align: left;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.4);
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .doc-table td {
+      color: rgba(255,255,255,0.55);
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top;
+    }
+
+    .doc-table td:first-child {
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .doc-table tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* ——— callout ——— */
+    .callout {
+      background: rgba(255,255,255,0.03);
+      border-left: 2px solid rgba(255,255,255,0.15);
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.8;
+    }
+
+    .callout strong {
+      color: rgba(255,255,255,0.7);
+      font-weight: 500;
+    }
+
+    /* ——— divider ——— */
+    hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      margin: 40px 0;
+    }
+
+    /* ——— back link ——— */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.3);
+      border: none;
+      margin-bottom: 32px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: #fff;
+    }
+
+    /* ——— footer ——— */
+    .doc-footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 32px 0;
+      margin-top: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.15em;
+    }
+
+    .doc-footer a {
+      color: rgba(255,255,255,0.3);
+      border: none;
+    }
+
+    .doc-footer a:hover {
+      color: #fff;
+    }
+
+    /* ——— mobile ——— */
+    .mobile-nav-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      background: rgba(0,0,0,0.9);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      color: #fff;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+
+    @media (max-width: 800px) {
+      .mobile-nav-toggle { display: block; }
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 150;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .content {
+        margin-left: 0;
+        padding: 72px 20px 120px;
+      }
+    }
+
+    /* ——— fade-in on scroll ——— */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ——— scroll indicator ——— */
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 240px;
+      right: 0;
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      z-index: 50;
+    }
+
+    .scroll-indicator-bar {
+      height: 100%;
+      background: rgba(255,255,255,0.2);
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    @media (max-width: 800px) {
+      .scroll-indicator { left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- scroll indicator -->
+  <div class="scroll-indicator">
+    <div class="scroll-indicator-bar" id="scrollBar"></div>
+  </div>
+
+  <!-- mobile nav toggle -->
+  <button class="mobile-nav-toggle" id="navToggle" aria-label="Toggle navigation">☰ docs</button>
+
+  <div class="page">
+
+    <!-- sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <a href="index.html" class="sidebar-logo">
+        <img src="sworm-icon.png" alt="sworm">
+        <span>sworm</span>
+      </a>
+      <div class="sidebar-label">documentation</div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">getting started</div>
+        <a href="#installation" class="sidebar-link">installation</a>
+        <a href="#quick-start" class="sidebar-link">quick start</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">cli</div>
+        <a href="#cli-deploy" class="sidebar-link">deploy</a>
+        <a href="#cli-run" class="sidebar-link">run</a>
+        <a href="#cli-kill" class="sidebar-link">kill</a>
+        <a href="#cli-list" class="sidebar-link">list</a>
+        <a href="#cli-status" class="sidebar-link">status</a>
+        <a href="#cli-monitors" class="sidebar-link">monitors</a>
+        <a href="#cli-voice" class="sidebar-link">voice</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">formations</div>
+        <a href="#formation-schema" class="sidebar-link">yaml schema</a>
+        <a href="#positioning" class="sidebar-link">positioning</a>
+        <a href="#monitor-refs" class="sidebar-link">monitor references</a>
+        <a href="#grid-system" class="sidebar-link">grid system</a>
+        <a href="#formation-examples" class="sidebar-link">examples</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">worms</div>
+        <a href="#worm-types" class="sidebar-link">worm types</a>
+        <a href="#worm-claude" class="sidebar-link">claude</a>
+        <a href="#worm-ide" class="sidebar-link">ide</a>
+        <a href="#worm-app" class="sidebar-link">app</a>
+        <a href="#worm-ai-agent" class="sidebar-link">ai-agent</a>
+        <a href="#worm-generic" class="sidebar-link">generic</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">ai agents</div>
+        <a href="#agent-providers" class="sidebar-link">providers</a>
+        <a href="#agent-tools" class="sidebar-link">tools</a>
+        <a href="#agent-config" class="sidebar-link">configuration</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">voice & hotkeys</div>
+        <a href="#voice-control" class="sidebar-link">voice control</a>
+        <a href="#voice-commands" class="sidebar-link">voice commands</a>
+        <a href="#hotkeys" class="sidebar-link">hotkeys</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">configuration</div>
+        <a href="#config-file" class="sidebar-link">config file</a>
+        <a href="#providers-file" class="sidebar-link">providers file</a>
+      </div>
+    </nav>
+
+    <!-- main content -->
+    <main class="content">
+
+      <a href="index.html" class="back-link">← back to sworm</a>
+
+      <div class="doc-header">
+        <h1>documentation</h1>
+        <p>v0.2.0 — spatial agent orchestration</p>
+      </div>
+
+      <!-- ═══ INSTALLATION ═══ -->
+      <section class="doc-section fade-in" id="installation">
+        <h2>installation</h2>
+        <p>sworm requires node.js ≥ 20 and runs on windows 11. clone and install:</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">git clone https://github.com/dannygardner26/Sworm.git</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">cd Sworm</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">npm install</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">npm run build</span></div>
+        </div>
+        <p>after building, the <code>sworm</code> command is available via <code>npm run dev</code> during development or <code>node dist/cli/index.js</code> in production.</p>
+      </section>
+
+      <!-- ═══ QUICK START ═══ -->
+      <section class="doc-section fade-in" id="quick-start">
+        <h2>quick start</h2>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm deploy pilot</span>      <span class="comment"># deploy a formation</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run claude</span>        <span class="comment"># quick-launch claude code</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run shell</span>         <span class="comment"># quick-launch a terminal</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm list</span>              <span class="comment"># see available formations</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm status</span>            <span class="comment"># check active worms</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm kill</span>              <span class="comment"># tear down everything</span></div>
+        </div>
+        <p>run <code>sworm</code> with no arguments to see available formations and active worms at a glance.</p>
+      </section>
+
+      <hr>
+
+      <!-- ═══ CLI ═══ -->
+      <section class="doc-section fade-in" id="cli-deploy">
+        <h2>cli — deploy</h2>
+        <p>deploy a named formation from the <code>formations/</code> directory.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm deploy &lt;formation&gt;</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm deploy pilot --force</span>      <span class="comment"># kill existing worms first</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm deploy pilot --dry-run</span>    <span class="comment"># preview window positions</span></div>
+        </div>
+        <table class="doc-table">
+          <tr><th>option</th><th>description</th></tr>
+          <tr><td><code>--force</code></td><td>kill all active worms before deploying</td></tr>
+          <tr><td><code>--dry-run</code></td><td>show computed positions without spawning windows</td></tr>
+        </table>
+        <p>omit the formation name to see a list of available choices.</p>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-run">
+        <h2>cli — run</h2>
+        <p>quick-launch a single worm without writing a yaml file.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm run claude</span>              <span class="comment"># claude code, full screen</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run claude -z left-half</span>  <span class="comment"># claude code, left half</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run shell</span>               <span class="comment"># windows terminal</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run code .</span>              <span class="comment"># vs code on current dir</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run https://github.com</span>  <span class="comment"># open url in chrome</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm run notepad.exe</span>         <span class="comment"># any executable</span></div>
+        </div>
+        <table class="doc-table">
+          <tr><th>option</th><th>description</th></tr>
+          <tr><td><code>-m, --monitor</code></td><td>target monitor reference (default: primary)</td></tr>
+          <tr><td><code>-z, --zone</code></td><td>position zone (default: full)</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-kill">
+        <h2>cli — kill</h2>
+        <p>tear down active worms — all at once, by formation name, or by individual worm id.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm kill</span>             <span class="comment"># kill all active worms</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm kill pilot</span>       <span class="comment"># kill by formation name</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm kill --id editor</span> <span class="comment"># kill a specific worm</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-list">
+        <h2>cli — list</h2>
+        <p>show all available formations with descriptions and worm counts.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm list</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-status">
+        <h2>cli — status</h2>
+        <p>display the current state of all active worms — their ids, types, status, and assigned numbers.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm status</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-monitors">
+        <h2>cli — monitors</h2>
+        <p>list all connected monitors with their bounds, work areas, and scale factors. useful for debugging multi-monitor formations.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm monitors</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="cli-voice">
+        <h2>cli — voice</h2>
+        <p>manage voice activation — setup whisper, start listening, or check status.</p>
+        <div class="code-block">
+          <div><span class="prompt">$ </span><span class="cmd">sworm voice setup</span>           <span class="comment"># download whisper.cpp + model</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm voice listen</span>          <span class="comment"># start push-to-talk + wake word</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm voice listen --no-wake</span> <span class="comment"># hotkey-only mode</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm voice listen --bridge</span>  <span class="comment"># http bridge mode</span></div>
+          <div><span class="prompt">$ </span><span class="cmd">sworm voice status</span>          <span class="comment"># show voice config</span></div>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ═══ FORMATIONS ═══ -->
+      <section class="doc-section fade-in" id="formation-schema">
+        <h2>formation yaml schema</h2>
+        <p>formations are yaml files in the <code>formations/</code> directory that declare which worms to deploy and where.</p>
+        <div class="code-block">
+          <div><span class="key">name:</span> <span class="val">pilot</span></div>
+          <div><span class="key">description:</span> <span class="str">"primary dev formation"</span></div>
+          <div><span class="key">mode:</span> <span class="val">normal</span>           <span class="comment"># normal | wallpaper</span></div>
+          <div><span class="key">monitors:</span>              <span class="comment"># optional monitor aliases</span></div>
+          <div>  <span class="key">dev:</span> <span class="val">primary</span></div>
+          <div>  <span class="key">ref:</span> <span class="val">right</span></div>
+          <div><span class="key">grid:</span>                  <span class="comment"># optional grid config</span></div>
+          <div>  <span class="key">columns:</span> <span class="val">12</span></div>
+          <div>  <span class="key">rows:</span> <span class="val">6</span></div>
+          <div>  <span class="key">gap:</span> <span class="val">4</span></div>
+          <div><span class="key">hooks:</span>                 <span class="comment"># optional lifecycle hooks</span></div>
+          <div>  <span class="key">pre:</span> <span class="val">["echo deploying"]</span></div>
+          <div>  <span class="key">post:</span> <span class="val">["echo done"]</span></div>
+          <div><span class="key">worms:</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">my-worm</span></div>
+          <div>    <span class="key">type:</span> <span class="val">claude</span></div>
+          <div>    <span class="key">monitor:</span> <span class="val">primary</span></div>
+          <div>    <span class="key">position:</span></div>
+          <div>      <span class="key">zone:</span> <span class="val">left-half</span></div>
+          <div>    <span class="key">params:</span> <span class="val">{}</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="positioning">
+        <h2>positioning</h2>
+        <p>each worm has a <code>position</code> field that supports three modes:</p>
+
+        <h3>zone positioning</h3>
+        <p>predefined screen regions. the simplest way to place windows.</p>
+        <table class="doc-table">
+          <tr><th>zone</th><th>description</th></tr>
+          <tr><td><code>full</code></td><td>entire work area</td></tr>
+          <tr><td><code>left-half</code></td><td>left 50%</td></tr>
+          <tr><td><code>right-half</code></td><td>right 50%</td></tr>
+          <tr><td><code>top-half</code></td><td>top 50%</td></tr>
+          <tr><td><code>bottom-half</code></td><td>bottom 50%</td></tr>
+          <tr><td><code>top-left</code></td><td>top-left quadrant</td></tr>
+          <tr><td><code>top-right</code></td><td>top-right quadrant</td></tr>
+          <tr><td><code>bottom-left</code></td><td>bottom-left quadrant</td></tr>
+          <tr><td><code>bottom-right</code></td><td>bottom-right quadrant</td></tr>
+          <tr><td><code>left-third</code></td><td>left 33%</td></tr>
+          <tr><td><code>center-third</code></td><td>center 33%</td></tr>
+          <tr><td><code>right-third</code></td><td>right 33%</td></tr>
+        </table>
+        <div class="code-block">
+          <div><span class="key">position:</span></div>
+          <div>  <span class="key">zone:</span> <span class="val">left-half</span></div>
+        </div>
+
+        <h3>grid positioning</h3>
+        <p>place worms on a virtual grid. configurable columns, rows, and gap.</p>
+        <div class="code-block">
+          <div><span class="key">position:</span></div>
+          <div>  <span class="key">grid:</span></div>
+          <div>    <span class="key">col:</span> <span class="val">0</span>        <span class="comment"># column index (0-based)</span></div>
+          <div>    <span class="key">row:</span> <span class="val">0</span>        <span class="comment"># row index (0-based)</span></div>
+          <div>    <span class="key">colSpan:</span> <span class="val">6</span>    <span class="comment"># span columns (default: 1)</span></div>
+          <div>    <span class="key">rowSpan:</span> <span class="val">3</span>    <span class="comment"># span rows (default: 1)</span></div>
+        </div>
+
+        <h3>absolute positioning</h3>
+        <p>pixel or percentage-based coordinates relative to the monitor work area.</p>
+        <div class="code-block">
+          <div><span class="key">position:</span></div>
+          <div>  <span class="key">absolute:</span></div>
+          <div>    <span class="key">x:</span> <span class="val">0</span>          <span class="comment"># pixels or "50%"</span></div>
+          <div>    <span class="key">y:</span> <span class="val">0</span></div>
+          <div>    <span class="key">width:</span> <span class="str">"50%"</span></div>
+          <div>    <span class="key">height:</span> <span class="str">"100%"</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="monitor-refs">
+        <h2>monitor references</h2>
+        <p>the <code>monitor</code> field on each worm specifies which display to target.</p>
+        <table class="doc-table">
+          <tr><th>reference</th><th>description</th></tr>
+          <tr><td><code>primary</code></td><td>the primary display</td></tr>
+          <tr><td><code>left</code></td><td>leftmost monitor</td></tr>
+          <tr><td><code>right</code></td><td>rightmost monitor</td></tr>
+          <tr><td><code>top</code></td><td>topmost monitor</td></tr>
+          <tr><td><code>bottom</code></td><td>bottommost monitor</td></tr>
+          <tr><td><code>index:N</code></td><td>monitor by index (0-based)</td></tr>
+        </table>
+        <p>you can also define monitor aliases in the formation's <code>monitors</code> map and reference those aliases in worm configs.</p>
+      </section>
+
+      <section class="doc-section fade-in" id="grid-system">
+        <h2>grid system</h2>
+        <p>the optional <code>grid</code> config on a formation sets up a virtual grid for precise layouts.</p>
+        <table class="doc-table">
+          <tr><th>property</th><th>default</th><th>description</th></tr>
+          <tr><td><code>columns</code></td><td>12</td><td>number of columns</td></tr>
+          <tr><td><code>rows</code></td><td>6</td><td>number of rows</td></tr>
+          <tr><td><code>gap</code></td><td>4</td><td>gap between cells (px)</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="formation-examples">
+        <h2>formation examples</h2>
+
+        <h3>pilot — primary dev layout</h3>
+        <div class="code-block">
+          <div><span class="key">name:</span> <span class="val">pilot</span></div>
+          <div><span class="key">description:</span> <span class="str">"primary dev formation — claude + ide"</span></div>
+          <div><span class="key">worms:</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">claude-main</span></div>
+          <div>    <span class="key">type:</span> <span class="val">claude</span></div>
+          <div>    <span class="key">monitor:</span> <span class="val">primary</span></div>
+          <div>    <span class="key">position:</span> { <span class="key">zone:</span> <span class="val">left-half</span> }</div>
+          <div>    <span class="key">params:</span> { <span class="key">repo:</span> <span class="str">"."</span>, <span class="key">shell:</span> <span class="val">wt</span> }</div>
+          <div>  - <span class="key">id:</span> <span class="val">editor</span></div>
+          <div>    <span class="key">type:</span> <span class="val">ide</span></div>
+          <div>    <span class="key">monitor:</span> <span class="val">primary</span></div>
+          <div>    <span class="key">position:</span> { <span class="key">zone:</span> <span class="val">right-half</span> }</div>
+          <div>    <span class="key">params:</span> { <span class="key">folder:</span> <span class="str">"."</span> }</div>
+        </div>
+
+        <h3>debug — focused debugging</h3>
+        <div class="code-block">
+          <div><span class="key">name:</span> <span class="val">debug</span></div>
+          <div><span class="key">description:</span> <span class="str">"debug formation — claude + ide + logs"</span></div>
+          <div><span class="key">worms:</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">editor</span>          <span class="comment"># top half</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">claude-debug</span>    <span class="comment"># bottom-left</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">logs</span>            <span class="comment"># bottom-right terminal</span></div>
+        </div>
+
+        <h3>review — code review</h3>
+        <div class="code-block">
+          <div><span class="key">name:</span> <span class="val">review</span></div>
+          <div><span class="key">description:</span> <span class="str">"code review — pr browser + ide + claude"</span></div>
+          <div><span class="key">worms:</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">pr-browser</span>     <span class="comment"># chrome on left-half</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">editor</span>          <span class="comment"># ide top-right</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">claude-review</span>   <span class="comment"># claude bottom-right</span></div>
+        </div>
+
+        <h3>sworm — dual agents</h3>
+        <div class="code-block">
+          <div><span class="key">name:</span> <span class="val">sworm</span></div>
+          <div><span class="key">description:</span> <span class="str">"two claude code agents — left builds, right tests"</span></div>
+          <div><span class="key">worms:</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">builder</span>    <span class="comment"># left-half</span></div>
+          <div>  - <span class="key">id:</span> <span class="val">reviewer</span>   <span class="comment"># right-half</span></div>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ═══ WORM TYPES ═══ -->
+      <section class="doc-section fade-in" id="worm-types">
+        <h2>worm types</h2>
+        <p>each worm has a <code>type</code> that determines what it spawns and how it finds its window.</p>
+        <table class="doc-table">
+          <tr><th>type</th><th>description</th><th>key params</th></tr>
+          <tr><td><code>claude</code></td><td>claude code in windows terminal</td><td>repo, shell, branch, worktreepath, initialprompt</td></tr>
+          <tr><td><code>ide</code></td><td>vs code</td><td>folder, workspace, files</td></tr>
+          <tr><td><code>app</code></td><td>browser (chrome, edge, firefox, brave)</td><td>app, url, profile, args</td></tr>
+          <tr><td><code>ai-agent</code></td><td>llm agent with tool use</td><td>provider, model, repo, prompt, systemprompt, branch</td></tr>
+          <tr><td><code>generic</code></td><td>any executable</td><td>executable, args</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="worm-claude">
+        <h2>worm — claude</h2>
+        <p>launches claude code in a terminal window. supports git worktrees for isolated branches.</p>
+        <table class="doc-table">
+          <tr><th>param</th><th>type</th><th>description</th></tr>
+          <tr><td><code>repo</code></td><td>string (required)</td><td>repository path, or <code>"."</code> for cwd</td></tr>
+          <tr><td><code>shell</code></td><td>"wt" | "cmd" | "powershell"</td><td>terminal to use (default: wt)</td></tr>
+          <tr><td><code>branch</code></td><td>string</td><td>create a git worktree for this branch</td></tr>
+          <tr><td><code>worktreePath</code></td><td>string</td><td>custom worktree directory</td></tr>
+          <tr><td><code>initialPrompt</code></td><td>string</td><td>initial prompt to pass to claude</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="worm-ide">
+        <h2>worm — ide</h2>
+        <p>opens vs code with <code>--new-window</code>.</p>
+        <table class="doc-table">
+          <tr><th>param</th><th>type</th><th>description</th></tr>
+          <tr><td><code>folder</code></td><td>string</td><td>folder to open</td></tr>
+          <tr><td><code>workspace</code></td><td>string</td><td>.code-workspace file to open</td></tr>
+          <tr><td><code>files</code></td><td>string[]</td><td>specific files to open</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="worm-app">
+        <h2>worm — app</h2>
+        <p>launches a browser window. chromium browsers get <code>--new-window</code> and profile support.</p>
+        <table class="doc-table">
+          <tr><th>param</th><th>type</th><th>description</th></tr>
+          <tr><td><code>app</code></td><td>string (required)</td><td>browser name: chrome, edge, firefox, brave, or full path</td></tr>
+          <tr><td><code>url</code></td><td>string</td><td>url to open</td></tr>
+          <tr><td><code>profile</code></td><td>string</td><td>browser profile directory (chromium only)</td></tr>
+          <tr><td><code>args</code></td><td>string[]</td><td>additional command-line arguments</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="worm-ai-agent">
+        <h2>worm — ai-agent</h2>
+        <p>spawns an autonomous ai agent in a terminal. the agent runs in a loop using llm tool use to read/write files and execute commands.</p>
+        <table class="doc-table">
+          <tr><th>param</th><th>type</th><th>description</th></tr>
+          <tr><td><code>provider</code></td><td>string (required)</td><td>provider name from providers.yaml</td></tr>
+          <tr><td><code>model</code></td><td>string</td><td>override model</td></tr>
+          <tr><td><code>repo</code></td><td>string (required)</td><td>repository path</td></tr>
+          <tr><td><code>prompt</code></td><td>string (required)</td><td>task for the agent</td></tr>
+          <tr><td><code>systemPrompt</code></td><td>string</td><td>custom system prompt</td></tr>
+          <tr><td><code>branch</code></td><td>string</td><td>create a git worktree</td></tr>
+          <tr><td><code>shell</code></td><td>"wt" | "cmd" | "powershell"</td><td>terminal to use</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="worm-generic">
+        <h2>worm — generic</h2>
+        <p>launches any executable. window detection uses a before/after snapshot approach.</p>
+        <table class="doc-table">
+          <tr><th>param</th><th>type</th><th>description</th></tr>
+          <tr><td><code>executable</code></td><td>string (required)</td><td>path or name of executable</td></tr>
+          <tr><td><code>args</code></td><td>string[]</td><td>command-line arguments</td></tr>
+        </table>
+      </section>
+
+      <hr>
+
+      <!-- ═══ AI AGENTS ═══ -->
+      <section class="doc-section fade-in" id="agent-providers">
+        <h2>ai providers</h2>
+        <p>sworm supports multiple llm providers. configure them in <code>~/.sworm/providers.yaml</code>.</p>
+        <table class="doc-table">
+          <tr><th>type</th><th>description</th></tr>
+          <tr><td><code>anthropic</code></td><td>anthropic api (claude)</td></tr>
+          <tr><td><code>openai</code></td><td>openai api (gpt-4, etc.)</td></tr>
+          <tr><td><code>azure-openai</code></td><td>azure-hosted openai</td></tr>
+          <tr><td><code>gemini</code></td><td>google gemini api</td></tr>
+          <tr><td><code>bedrock</code></td><td>aws bedrock</td></tr>
+          <tr><td><code>ollama</code></td><td>local ollama models</td></tr>
+          <tr><td><code>claude-code</code></td><td>claude code cli</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="agent-tools">
+        <h2>agent tools</h2>
+        <p>ai agents have access to four built-in tools, sandboxed to the working directory:</p>
+        <table class="doc-table">
+          <tr><th>tool</th><th>description</th></tr>
+          <tr><td><code>file_read</code></td><td>read the contents of a file</td></tr>
+          <tr><td><code>file_write</code></td><td>write content to a file (create or overwrite)</td></tr>
+          <tr><td><code>file_list</code></td><td>list files in a directory (optionally recursive)</td></tr>
+          <tr><td><code>shell_exec</code></td><td>execute a shell command (30s timeout)</td></tr>
+        </table>
+        <div class="callout">
+          <strong>security:</strong> all file paths are validated to stay within the working directory. the agent cannot escape its sandbox.
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="agent-config">
+        <h2>agent configuration</h2>
+        <p>agent runtime settings:</p>
+        <table class="doc-table">
+          <tr><th>setting</th><th>default</th><th>description</th></tr>
+          <tr><td><code>maxIterations</code></td><td>50</td><td>maximum tool-use loop iterations</td></tr>
+          <tr><td><code>maxTokens</code></td><td>4096</td><td>max tokens per llm response</td></tr>
+        </table>
+      </section>
+
+      <hr>
+
+      <!-- ═══ VOICE ═══ -->
+      <section class="doc-section fade-in" id="voice-control">
+        <h2>voice control</h2>
+        <p>sworm supports hands-free operation via whisper-powered speech recognition. two activation modes:</p>
+        <ul>
+          <li><strong>push-to-talk</strong> — hold a hotkey (default: <code>ctrl+shift+space</code>) and speak</li>
+          <li><strong>wake word</strong> — say "hey sworm" to activate (configurable)</li>
+        </ul>
+        <h3>setup</h3>
+        <p>run <code>sworm voice setup</code> to download whisper.cpp and the tiny.en model automatically. this configures <code>~/.sworm/config.yaml</code> with the correct paths.</p>
+      </section>
+
+      <section class="doc-section fade-in" id="voice-commands">
+        <h2>voice commands</h2>
+        <p>supported voice commands (filler words like "please", "um", "just" are automatically stripped):</p>
+        <table class="doc-table">
+          <tr><th>say</th><th>action</th></tr>
+          <tr><td>"deploy pilot"</td><td>deploy formation</td></tr>
+          <tr><td>"switch to debug"</td><td>deploy formation</td></tr>
+          <tr><td>"kill all"</td><td>kill all worms</td></tr>
+          <tr><td>"kill editor"</td><td>kill specific worm</td></tr>
+          <tr><td>"status"</td><td>show status</td></tr>
+          <tr><td>"focus on editor"</td><td>focus a worm</td></tr>
+          <tr><td>"agent 2"</td><td>focus worm #2</td></tr>
+          <tr><td>"expand agent 1"</td><td>fullscreen worm #1</td></tr>
+          <tr><td>"fullscreen 3"</td><td>fullscreen worm #3</td></tr>
+          <tr><td>"list formations"</td><td>list available formations</td></tr>
+          <tr><td>"minimize all"</td><td>send all to back</td></tr>
+          <tr><td>"show worms"</td><td>toggle visibility</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section fade-in" id="hotkeys">
+        <h2>hotkeys</h2>
+        <p>global win32 keyboard shortcuts are registered automatically when running. configure bindings in <code>~/.sworm/config.yaml</code>.</p>
+        <table class="doc-table">
+          <tr><th>action</th><th>description</th></tr>
+          <tr><td><code>toggle-visibility</code></td><td>show/hide all worms</td></tr>
+          <tr><td><code>focus-worm</code></td><td>focus worm by number</td></tr>
+          <tr><td><code>kill-all</code></td><td>kill all worms</td></tr>
+          <tr><td><code>deploy-default</code></td><td>deploy the pilot formation</td></tr>
+          <tr><td><code>voice-activate</code></td><td>start push-to-talk recording</td></tr>
+        </table>
+        <div class="callout">
+          <strong>key format:</strong> modifier keys are <code>ctrl</code>, <code>shift</code>, <code>alt</code>, <code>win</code>. combine with <code>+</code>, e.g. <code>ctrl+shift+s</code>. supports alphanumeric keys, f1-f8, space, enter, escape, tab.
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- ═══ CONFIG ═══ -->
+      <section class="doc-section fade-in" id="config-file">
+        <h2>configuration — ~/.sworm/config.yaml</h2>
+        <p>global settings file. generated automatically on first use or via <code>sworm voice setup</code>.</p>
+        <div class="code-block">
+          <div><span class="key">general:</span></div>
+          <div>  <span class="key">defaultFormation:</span> <span class="val">pilot</span></div>
+          <div>  <span class="key">formationsDir:</span> <span class="str">"./formations"</span>  <span class="comment"># custom path</span></div>
+          <div>  <span class="key">theme:</span> <span class="val">dark</span>            <span class="comment"># dark | light</span></div>
+          <div></div>
+          <div><span class="key">voice:</span></div>
+          <div>  <span class="key">enabled:</span> <span class="val">false</span></div>
+          <div>  <span class="key">pushToTalk:</span></div>
+          <div>    <span class="key">enabled:</span> <span class="val">true</span></div>
+          <div>    <span class="key">hotkey:</span> <span class="str">"ctrl+shift+space"</span></div>
+          <div>  <span class="key">wakeWord:</span></div>
+          <div>    <span class="key">enabled:</span> <span class="val">false</span></div>
+          <div>    <span class="key">phrase:</span> <span class="str">"sworm"</span></div>
+          <div>  <span class="key">whisper:</span></div>
+          <div>    <span class="key">binaryPath:</span> <span class="str">""</span></div>
+          <div>    <span class="key">modelPath:</span> <span class="str">""</span></div>
+          <div>    <span class="key">sampleRate:</span> <span class="val">16000</span></div>
+          <div>  <span class="key">recorder:</span> <span class="val">sox</span>            <span class="comment"># sox | ffmpeg</span></div>
+          <div>  <span class="key">pttTimeout:</span> <span class="val">5000</span></div>
+          <div>  <span class="key">feedback:</span></div>
+          <div>    <span class="key">chimeOnListen:</span> <span class="val">true</span></div>
+          <div>    <span class="key">chimeOnAcknowledge:</span> <span class="val">true</span></div>
+          <div></div>
+          <div><span class="key">hotkeys:</span></div>
+          <div>  <span class="key">enabled:</span> <span class="val">true</span></div>
+          <div>  <span class="key">bindings:</span></div>
+          <div>    - <span class="key">key:</span> <span class="str">"ctrl+shift+s"</span></div>
+          <div>      <span class="key">action:</span> <span class="val">toggle-visibility</span></div>
+        </div>
+      </section>
+
+      <section class="doc-section fade-in" id="providers-file">
+        <h2>configuration — ~/.sworm/providers.yaml</h2>
+        <p>define llm providers for ai agents. api keys can reference environment variables via <code>${ENV_VAR}</code> syntax.</p>
+        <div class="code-block">
+          <div><span class="key">providers:</span></div>
+          <div>  <span class="key">claude:</span></div>
+          <div>    <span class="key">type:</span> <span class="val">anthropic</span></div>
+          <div>    <span class="key">apiKey:</span> <span class="str">"${ANTHROPIC_API_KEY}"</span></div>
+          <div>    <span class="key">defaultModel:</span> <span class="val">claude-sonnet-4-20250514</span></div>
+          <div></div>
+          <div>  <span class="key">gpt:</span></div>
+          <div>    <span class="key">type:</span> <span class="val">openai</span></div>
+          <div>    <span class="key">apiKey:</span> <span class="str">"${OPENAI_API_KEY}"</span></div>
+          <div>    <span class="key">defaultModel:</span> <span class="val">gpt-4o</span></div>
+          <div></div>
+          <div>  <span class="key">gemini:</span></div>
+          <div>    <span class="key">type:</span> <span class="val">gemini</span></div>
+          <div>    <span class="key">apiKey:</span> <span class="str">"${GEMINI_API_KEY}"</span></div>
+          <div></div>
+          <div>  <span class="key">local:</span></div>
+          <div>    <span class="key">type:</span> <span class="val">ollama</span></div>
+          <div>    <span class="key">baseUrl:</span> <span class="str">"http://localhost:11434"</span></div>
+          <div>    <span class="key">defaultModel:</span> <span class="val">llama3</span></div>
+          <div></div>
+          <div><span class="key">defaults:</span></div>
+          <div>  <span class="key">provider:</span> <span class="val">claude</span></div>
+          <div>  <span class="key">model:</span> <span class="val">claude-sonnet-4-20250514</span></div>
+        </div>
+        <table class="doc-table">
+          <tr><th>field</th><th>description</th></tr>
+          <tr><td><code>type</code></td><td>provider type (anthropic, openai, azure-openai, gemini, bedrock, ollama, claude-code)</td></tr>
+          <tr><td><code>apiKey</code></td><td>api key or env var reference</td></tr>
+          <tr><td><code>baseUrl</code></td><td>custom api endpoint</td></tr>
+          <tr><td><code>region</code></td><td>aws region (bedrock)</td></tr>
+          <tr><td><code>deployment</code></td><td>azure deployment name</td></tr>
+          <tr><td><code>defaultModel</code></td><td>default model for this provider</td></tr>
+        </table>
+      </section>
+
+      <!-- ═══ FOOTER ═══ -->
+      <div class="doc-footer">
+        <span>sworm v0.2.0</span>
+        <div>
+          <a href="https://github.com/dannygardner26/Sworm" target="_blank" rel="noopener">github</a>
+          &nbsp;&nbsp;
+          <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">mit license</a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- scripts -->
+  <script>
+    // Scroll progress bar
+    window.addEventListener('scroll', () => {
+      const bar = document.getElementById('scrollBar');
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.width = h > 0 ? (window.scrollY / h * 100) + '%' : '0%';
+    }, { passive: true });
+
+    // Mobile nav toggle
+    document.getElementById('navToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    // Close sidebar on link click (mobile)
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+      link.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('open');
+      });
+    });
+
+    // Active sidebar link tracking
+    const sections = document.querySelectorAll('.doc-section');
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+    const sectionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          sidebarLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+          });
+        }
+      });
+    }, { rootMargin: '-20% 0px -60% 0px' });
+
+    sections.forEach(s => sectionObserver.observe(s));
+
+    // Fade-in on scroll
+    const fadeObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+  </script>
+
+</body>
+</html>
