@@ -12,6 +12,7 @@ const state = {
   paneCounter: 0,
   commandPaletteOpen: false,
   voiceShortcut: null,
+  voiceCommand: false,
   sparkMode: true,
   inputText: '',
 };
@@ -137,7 +138,7 @@ function handleSparkKey(e) {
   if (state.commandPaletteOpen) return;
   if (['Control', 'Shift', 'Alt', 'Meta', 'Tab'].includes(e.key)) return;
 
-  if (e.ctrlKey && e.code === 'Space') { e.preventDefault(); toggleCommandPalette(); return; }
+  if (e.ctrlKey && e.key === 'k') { e.preventDefault(); toggleCommandPalette(); return; }
   if (e.ctrlKey && e.key === 'n') { e.preventDefault(); executeSparkCommand('agent'); return; }
 
   if (e.key === 'Escape') {
@@ -219,9 +220,8 @@ function executeSparkCommand(text) {
     return;
   }
 
-  // Default: run as shell command
-  enterPaneMode();
-  createPane({ name: t.split(/\s/)[0], cmd: t });
+  // Unrecognized command — send to brain for AI interpretation
+  window.sworm.brain.process(text).catch(() => {});
 }
 
 function enterPaneMode() {
@@ -525,7 +525,7 @@ function updateStatusBar() {
       ${focused ? `<span>[${focused.number}] ${focused.name}</span>` : ''}
     </div>
     <div class="right">
-      <span class="shortcut-hint">F9 voice | Ctrl+Space palette | Esc back</span>
+      <span class="shortcut-hint">${state.voiceShortcut && state.voiceShortcut !== 'no shortcuts available' ? state.voiceShortcut : 'Esc back'}</span>
     </div>
   `;
 }
@@ -586,7 +586,7 @@ function renderPaletteResults(query) {
 
 // ─── Keyboard Shortcuts ───────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.code === 'Space') { e.preventDefault(); toggleCommandPalette(); return; }
+  if (e.ctrlKey && e.key === 'k') { e.preventDefault(); toggleCommandPalette(); return; }
 
   if (state.commandPaletteOpen) {
     if (e.key === 'Escape') { toggleCommandPalette(); return; }
@@ -607,13 +607,174 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key >= '1' && e.key <= '9') { e.preventDefault(); focusByNumber(parseInt(e.key)); return; }
 });
 
+// ─── Audio Synth (Web Audio API) ─────────────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, duration, opts = {}) {
+  const { type = 'sine', gain = 0.15, delay = 0, detune = 0 } = opts;
+  const t = audioCtx.currentTime + delay;
+
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  if (detune) osc.detune.setValueAtTime(detune, t);
+
+  // Smooth ADSR envelope
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.02);     // attack
+  g.gain.linearRampToValueAtTime(gain * 0.7, t + 0.06); // decay
+  g.gain.setValueAtTime(gain * 0.7, t + duration - 0.05); // sustain
+  g.gain.linearRampToValueAtTime(0, t + duration);     // release
+
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + duration);
+}
+
+function playListeningSound() {
+  // Gentle ascending chime — two soft tones
+  playTone(523, 0.12, { gain: 0.12 });                    // C5
+  playTone(659, 0.15, { delay: 0.1, gain: 0.14 });        // E5
+  playTone(784, 0.18, { delay: 0.2, gain: 0.10, detune: 5 }); // G5 (slight shimmer)
+}
+
+function playAcknowledgeSound() {
+  // Soft descending confirmation
+  playTone(784, 0.1, { gain: 0.10 });                     // G5
+  playTone(659, 0.12, { delay: 0.08, gain: 0.12 });       // E5
+  playTone(523, 0.2, { delay: 0.16, gain: 0.08 });        // C5 (longer tail)
+}
+
+function playErrorSound() {
+  // Low muted buzz
+  playTone(220, 0.2, { type: 'triangle', gain: 0.08 });
+  playTone(208, 0.2, { type: 'triangle', gain: 0.06, delay: 0.02 }); // slight dissonance
+}
+
+// ─── Voice Action Descriptions ───────────────────────────
+function describeAction(text) {
+  const t = text.toLowerCase();
+  const count = parseCount(t);
+  if (t.match(/\b(kill|close|quit|exit)\b.*\ball\b/)) return 'Closing all panes...';
+  if (t.match(/\b(kill|close|quit|exit)\b/)) return 'Closing pane...';
+  if (t.match(/\b(shell|terminal)\b/)) return `Spawning ${count > 1 ? count + ' ' : ''}shell${count > 1 ? 's' : ''}...`;
+  if (t.match(/\b(agent|claude|tab|pane|window)\b/) && !t.match(/\b(shell|terminal|setting|launch|dash)\b/)) return `Spawning ${count > 1 ? count + ' ' : ''}agent${count > 1 ? 's' : ''}...`;
+  if (t.match(/\bsetting/)) return 'Opening settings...';
+  if (t.match(/\blaunch/)) return 'Opening launcher...';
+  if (t.match(/\bdash/)) return 'Opening dashboard...';
+  return 'Executing...';
+}
+
+function describeResult(text) {
+  const t = text.toLowerCase();
+  const count = parseCount(t);
+  if (t.match(/\b(kill|close|quit|exit)\b.*\ball\b/)) return 'Closed all panes';
+  if (t.match(/\b(kill|close|quit|exit)\b/)) return 'Pane closed';
+  if (t.match(/\b(shell|terminal)\b/)) return `Opened ${count} shell${count > 1 ? 's' : ''}`;
+  if (t.match(/\b(agent|claude|tab|pane|window)\b/) && !t.match(/\b(shell|terminal|setting|launch|dash)\b/)) return `Opened ${count} agent${count > 1 ? 's' : ''}`;
+  if (t.match(/\bsetting/)) return 'Settings opened';
+  if (t.match(/\blaunch/)) return 'Launcher opened';
+  if (t.match(/\bdash/)) return 'Dashboard opened';
+  return 'Done';
+}
+
+// ─── Brain Chat Feed ─────────────────────────────────────
+let chatFadeTimer = null;
+
+function addChatMessage(type, text) {
+  const feed = document.getElementById('brain-chat');
+  if (!feed) return null;
+
+  // Show the feed
+  feed.classList.remove('faded');
+  feed.style.display = 'flex';
+
+  const msg = document.createElement('div');
+  msg.className = `chat-msg ${type}`;
+  msg.textContent = text;
+  feed.appendChild(msg);
+
+  // Scroll to bottom (newest at bottom, pushes old up)
+  feed.scrollTop = feed.scrollHeight;
+
+  // Limit to last 20 messages
+  while (feed.children.length > 20) feed.removeChild(feed.firstChild);
+
+  return msg;
+}
+
+function fadeChatFeed() {
+  const feed = document.getElementById('brain-chat');
+  if (feed) feed.classList.add('faded');
+}
+
 // ─── Voice ───────────────────────────────────────────────
+let micStream = null;
+let micAnalyser = null;
+let micAnimFrame = null;
+
+function startMicVisualizer() {
+  const canvas = document.getElementById('voice-waveform');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    micStream = stream;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 128;
+    source.connect(micAnalyser);
+
+    const bufLen = micAnalyser.frequencyBinCount;
+    const data = new Uint8Array(bufLen);
+
+    function draw() {
+      micAnimFrame = requestAnimationFrame(draw);
+      micAnalyser.getByteFrequencyData(data);
+
+      canvas.width = canvas.offsetWidth * devicePixelRatio;
+      canvas.height = canvas.offsetHeight * devicePixelRatio;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const bars = 24;
+      const barW = canvas.width / bars;
+      const step = Math.floor(bufLen / bars);
+
+      for (let i = 0; i < bars; i++) {
+        const val = data[i * step] / 255;
+        const h = Math.max(2, val * canvas.height * 0.9);
+        const y = (canvas.height - h) / 2;
+
+        ctx.fillStyle = val > 0.5 ? '#4fc3f7' : val > 0.2 ? 'rgba(79,195,247,0.6)' : 'rgba(79,195,247,0.25)';
+        ctx.fillRect(i * barW + 1, y, barW - 2, h);
+      }
+    }
+    draw();
+  }).catch(() => {});
+}
+
+function stopMicVisualizer() {
+  if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  micAnalyser = null;
+}
+
 function initVoice() {
+  // Voice overlay (for listening state)
   const overlay = document.createElement('div');
   overlay.id = 'voice-overlay';
   overlay.className = 'voice-overlay hidden';
-  overlay.innerHTML = '<div class="voice-dot"></div><span class="voice-label">Listening...</span>';
+  overlay.innerHTML = '<div class="voice-dot"></div><canvas id="voice-waveform"></canvas><span class="voice-label">Listening...</span>';
   document.body.appendChild(overlay);
+
+  // Brain chat feed — scrolling conversation in center of screen
+  const chatFeed = document.createElement('div');
+  chatFeed.id = 'brain-chat';
+  chatFeed.className = 'brain-chat';
+  document.body.appendChild(chatFeed);
 
   window.sworm.voice.onStatus((status, message) => {
     const el = document.getElementById('voice-overlay');
@@ -625,39 +786,94 @@ function initVoice() {
         el.classList.remove('hidden');
         label.textContent = 'Listening...';
         dot.className = 'voice-dot recording';
+        startMicVisualizer();
+        playListeningSound();
         break;
       case 'processing':
         el.classList.remove('hidden');
-        label.textContent = 'Processing...';
+        label.textContent = 'Transcribing...';
         dot.className = 'voice-dot processing';
+        stopMicVisualizer();
+        playAcknowledgeSound();
         break;
       case 'error':
         el.classList.remove('hidden');
         label.textContent = message || 'Error';
         dot.className = 'voice-dot error';
+        stopMicVisualizer();
+        playErrorSound();
         setTimeout(() => el.classList.add('hidden'), 3000);
         break;
       case 'idle':
+        stopMicVisualizer();
         el.classList.add('hidden');
         break;
     }
   });
 
+  // Voice results go through the LLM brain
   window.sworm.voice.onResult((text) => {
-    const el = document.getElementById('voice-overlay');
-    if (el) {
-      el.classList.remove('hidden');
-      el.querySelector('.voice-label').textContent = '"' + text + '"';
-      el.querySelector('.voice-dot').className = 'voice-dot success';
-      setTimeout(() => el.classList.add('hidden'), 3000);
+    addChatMessage('user', '"' + text + '"');
+    window.sworm.brain.process(text).then(result => {
+      if (result.error) addChatMessage('error', result.error);
+    });
+  });
+
+  // Brain status updates → chat feed
+  let thinkingEl = null;
+  window.sworm.brain.onStatus((type, detail) => {
+    switch (type) {
+      case 'thinking':
+        thinkingEl = addChatMessage('thinking', 'Thinking...');
+        break;
+      case 'tool-call':
+        if (thinkingEl) {
+          thinkingEl.textContent = detail || 'Executing...';
+          thinkingEl.className = 'chat-msg tool';
+        } else {
+          addChatMessage('tool', detail || 'Executing...');
+        }
+        break;
+      case 'result':
+        if (thinkingEl) thinkingEl.remove();
+        thinkingEl = null;
+        addChatMessage('assistant', detail || 'Done');
+        // Auto-fade chat after 5 seconds of inactivity
+        clearTimeout(chatFadeTimer);
+        chatFadeTimer = setTimeout(() => fadeChatFeed(), 5000);
+        break;
+      case 'error':
+        if (thinkingEl) thinkingEl.remove();
+        thinkingEl = null;
+        addChatMessage('error', detail || 'Error');
+        playErrorSound();
+        break;
     }
-    executeSparkCommand(text);
+  });
+
+  // Brain pane query — respond with current pane state
+  window.sworm.brain.onGetPanes((replyChannel) => {
+    const panes = [...state.panes.entries()].map(([id, p]) => ({
+      id, name: p.name, number: p.number, type: p.type || 'terminal',
+    }));
+    window.sworm.brain.replyPanes(replyChannel, panes);
   });
 
   window.sworm.voice.onShortcut((shortcut) => {
     state.voiceShortcut = shortcut;
     updateStatusBar();
+    const hint = document.getElementById('spark-hint');
+    if (hint) {
+      if (shortcut && shortcut !== 'no shortcuts available') {
+        hint.innerHTML = shortcut.split(' | ').map(s => {
+          const [key, ...rest] = s.split(' ');
+          return `<span class="hint-key">${key}</span> ${rest.join(' ')}`;
+        }).join('<span class="hint-sep">&middot;</span>');
+      }
+    }
   });
+
+  window.sworm.voice.ready();
 }
 
 // ─── Init ─────────────────────────────────────────────────

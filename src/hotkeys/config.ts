@@ -5,7 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import { KeybindingsConfigSchema, type KeybindingsConfig, type Keybinding } from './types.js';
 
 const DEFAULT_BINDINGS: Keybinding[] = [
-  { key: 'ctrl+alt+space', action: 'voice-activate' },
+  { key: 'f9', action: 'voice-activate' },
   { key: 'ctrl+shift+s', action: 'toggle-visibility' },
   { key: 'ctrl+shift+1', action: 'focus-worm', args: { number: 1 } },
   { key: 'ctrl+shift+2', action: 'focus-worm', args: { number: 2 } },

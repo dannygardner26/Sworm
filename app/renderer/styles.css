@@ -3,16 +3,18 @@ html, body, #app { width: 100vw; height: 100vh; background: #0a0a0a; color: #e0e
 
 #titlebar-drag { position: fixed; top: 0; left: 0; right: 140px; height: 32px; -webkit-app-region: drag; z-index: 3000; }
 #spark-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1; }
-#spark-input-wrap { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; z-index: 2; cursor: text; }
+#spark-input-wrap { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; cursor: text; gap: 24px; }
+#spark-logo { width: 64px; height: 64px; opacity: 0.7; filter: drop-shadow(0 0 12px rgba(79,195,247,0.3)); transition: opacity 0.3s, filter 0.3s; user-select: none; pointer-events: none; }
+#spark-input-wrap:hover #spark-logo { opacity: 0.9; filter: drop-shadow(0 0 20px rgba(79,195,247,0.5)); }
 #spark-text { font-family: inherit; font-size: 32px; color: #fff; letter-spacing: 2px; white-space: pre; position: relative; text-shadow: 0 0 10px rgba(79,195,247,0.9), 0 0 20px rgba(79,195,247,0.6), 0 0 40px rgba(79,195,247,0.3), 0 0 80px rgba(79,195,247,0.15); }
 .spark-char { display: inline-block; animation: charGlow 2s ease-in-out infinite alternate; }
 @keyframes charGlow { 0% { text-shadow: 0 0 10px rgba(79,195,247,0.9), 0 0 20px rgba(79,195,247,0.6), 0 0 40px rgba(79,195,247,0.3); } 100% { text-shadow: 0 0 15px rgba(79,195,247,1), 0 0 30px rgba(79,195,247,0.8), 0 0 60px rgba(79,195,247,0.4), 0 0 100px rgba(79,195,247,0.2); } }
 #spark-cursor { display: inline-block; width: 2px; height: 1.2em; background: #4fc3f7; vertical-align: text-bottom; animation: cursorBlink 1s step-end infinite; margin-left: 1px; box-shadow: 0 0 8px rgba(79,195,247,0.8), 0 0 20px rgba(79,195,247,0.5), 0 0 40px rgba(79,195,247,0.2); }
 @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-#spark-hint { position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%); color: #333; font-size: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; transition: opacity 0.3s; user-select: none; }
-#spark-hint .hint-key { color: #444; background: #111; border: 1px solid #222; border-radius: 3px; padding: 2px 6px; font-size: 11px; }
-#spark-hint .hint-sep { color: #222; }
+#spark-hint { position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%); color: #888; font-size: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; transition: opacity 0.3s; user-select: none; }
+#spark-hint .hint-key { color: #4fc3f7; background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.25); border-radius: 3px; padding: 2px 6px; font-size: 11px; }
+#spark-hint .hint-sep { color: #444; }
 #spark-settings { position: fixed; bottom: 16px; right: 16px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #222; cursor: pointer; border-radius: 50%; transition: color 0.2s, background 0.2s; z-index: 10; }
 #spark-settings:hover { color: #4fc3f7; background: rgba(79,195,247,0.08); }
 
@@ -35,7 +37,7 @@ html, body, #app { width: 100vw; height: 100vh; background: #0a0a0a; color: #e0e
 #status-bar .left { display: flex; gap: 16px; align-items: center; }
 #status-bar .right { display: flex; gap: 16px; align-items: center; }
 #status-bar .agent-count { color: #4fc3f7; }
-#status-bar .shortcut-hint { color: #333; }
+#status-bar .shortcut-hint { color: #777; }
 
 #command-palette { position: fixed; top: 15%; left: 50%; transform: translateX(-50%); width: 520px; max-height: 420px; background: #111; border: 1px solid #4fc3f7; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 1000; overflow: hidden; animation: slideDown 0.1s ease-out; }
 @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -56,5 +58,22 @@ html, body, #app { width: 100vw; height: 100vh; background: #0a0a0a; color: #e0e
 .voice-dot.processing { background: #ff9800; animation: voicePulse 0.5s infinite; }
 .voice-dot.success { background: #4caf50; }
 .voice-dot.error { background: #f44336; }
+.voice-dot.thinking { background: #4fc3f7; animation: voicePulse 0.8s infinite; }
 @keyframes voicePulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(244,67,54,0.3); } 50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(244,67,54,0); } }
+#voice-waveform { width: 80px; height: 24px; flex-shrink: 0; }
 .voice-label { color: #e0e0e0; font-size: 13px; white-space: nowrap; }
+
+/* Brain Chat Feed */
+.brain-chat { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); width: 480px; max-height: 300px; display: none; flex-direction: column; gap: 6px; overflow-y: auto; z-index: 1500; padding: 12px; transition: opacity 0.5s; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+.brain-chat.faded { opacity: 0; pointer-events: none; }
+.brain-chat::-webkit-scrollbar { width: 4px; }
+.brain-chat::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+.chat-msg { padding: 8px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; max-width: 90%; animation: chatSlideUp 0.2s ease-out; word-wrap: break-word; }
+.chat-msg.user { align-self: flex-end; background: rgba(79,195,247,0.12); color: #4fc3f7; border: 1px solid rgba(79,195,247,0.2); }
+.chat-msg.assistant { align-self: flex-start; background: rgba(255,255,255,0.06); color: #ccc; border: 1px solid rgba(255,255,255,0.08); }
+.chat-msg.thinking { align-self: flex-start; background: rgba(79,195,247,0.06); color: #888; border: 1px solid rgba(79,195,247,0.1); font-style: italic; animation: chatSlideUp 0.2s ease-out, voicePulse 1.5s infinite; }
+.chat-msg.tool { align-self: flex-start; background: rgba(255,152,0,0.08); color: #ff9800; border: 1px solid rgba(255,152,0,0.15); font-size: 12px; font-family: 'Cascadia Code', monospace; }
+.chat-msg.error { align-self: flex-start; background: rgba(244,67,54,0.08); color: #f44336; border: 1px solid rgba(244,67,54,0.15); }
+
+@keyframes chatSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
