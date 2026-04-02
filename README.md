@@ -3,9 +3,13 @@
   <h1>sworm</h1>
   <p><em>spatial agent orchestration</em></p>
   <p>
+    <a href="https://github.com/dannygardner26/Sworm/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dannygardner26/Sworm/ci.yml?style=flat-square&label=CI" alt="CI"></a>
     <img src="https://img.shields.io/badge/license-MIT-white?style=flat-square" alt="MIT License">
     <img src="https://img.shields.io/badge/platform-Windows%2011-white?style=flat-square" alt="Windows 11">
     <img src="https://img.shields.io/badge/node-%3E%3D20-white?style=flat-square" alt="Node >= 20">
+    <a href="https://github.com/dannygardner26/Sworm/stargazers"><img src="https://img.shields.io/github/stars/dannygardner26/Sworm?style=flat-square" alt="Stars"></a>
+    <a href="https://github.com/dannygardner26/Sworm/issues"><img src="https://img.shields.io/github/issues/dannygardner26/Sworm?style=flat-square" alt="Issues"></a>
+    <img src="https://img.shields.io/github/last-commit/dannygardner26/Sworm?style=flat-square" alt="Last Commit">
   </p>
 </div>
 
