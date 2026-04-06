@@ -46,6 +46,14 @@ export function deployCommand(
 
         const spinner = ora(`Deploying formation ${chalk.bold(formation)}...`).start();
 
+        bus.on('hook:running', (phase, command) => {
+          spinner.text = `Running ${phase} hook: ${chalk.dim(command)}`;
+        });
+
+        bus.on('hook:failed', (phase, command, error) => {
+          spinner.warn(`${phase} hook failed: ${chalk.dim(command)}\n  ${chalk.red(error.message)}`);
+        });
+
         bus.on('worm:spawning', (wormId) => {
           spinner.text = `Spawning ${chalk.cyan(wormId)}...`;
         });

@@ -6,6 +6,7 @@ import { SwormEventBus } from './events.js';
 import { FormationLoader, resolveMonitor, resolvePosition } from './formation.js';
 import { WormNumbering } from './numbering.js';
 import { validateFormation, type ValidationResult } from './validate.js';
+import { runHooks, HookError } from './hooks.js';
 
 export class Swarm {
   private platform: PlatformAPI;
@@ -64,6 +65,20 @@ export class Swarm {
       );
       this.eventBus.emit('formation:failed', formationName, error);
       throw error;
+    }
+
+    // Run pre-deploy hooks — failure aborts the deploy before anything is spawned
+    if (config.hooks?.pre?.length) {
+      try {
+        await runHooks(config.hooks.pre, 'pre', { formation: formationName }, (cmd) => {
+          this.eventBus.emit('hook:running', 'pre', cmd);
+        });
+      } catch (err) {
+        const error = err instanceof HookError ? err : new Error(String(err));
+        this.eventBus.emit('hook:failed', 'pre', err instanceof HookError ? err.command : '', error);
+        this.eventBus.emit('formation:failed', formationName, error);
+        throw error;
+      }
     }
 
     // Deploy worms sequentially so each can accurately detect its new window
@@ -126,6 +141,18 @@ export class Swarm {
       } catch {
         // Wallpaper mode unavailable, fall back to sending all to back
         await this.sendAllToBack();
+      }
+    }
+
+    // Run post-deploy hooks — failure is a warning, worms are already running
+    if (config.hooks?.post?.length) {
+      try {
+        await runHooks(config.hooks.post, 'post', { formation: formationName }, (cmd) => {
+          this.eventBus.emit('hook:running', 'post', cmd);
+        });
+      } catch (err) {
+        const error = err instanceof HookError ? err : new Error(String(err));
+        this.eventBus.emit('hook:failed', 'post', err instanceof HookError ? err.command : '', error);
       }
     }
 
