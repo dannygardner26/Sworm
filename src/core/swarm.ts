@@ -5,6 +5,8 @@ import { WormTypeRegistry } from './registry.js';
 import { SwormEventBus } from './events.js';
 import { FormationLoader, resolveMonitor, resolvePosition } from './formation.js';
 import { WormNumbering } from './numbering.js';
+import { validateFormation, type ValidationResult } from './validate.js';
+import { runHooks, HookError } from './hooks.js';
 
 export class Swarm {
   private platform: PlatformAPI;
@@ -51,6 +53,33 @@ export class Swarm {
 
     const formationName = config.name;
     const monitors = await this.platform.monitors.getAll();
+
+    // Pre-flight validation — fail fast before any process is spawned
+    const validation = validateFormation(config, monitors, this.registry);
+    if (!validation.valid) {
+      const lines = validation.issues.map((issue) =>
+        issue.wormId ? `  [${issue.wormId}] ${issue.message}` : `  ${issue.message}`,
+      );
+      const error = new Error(
+        `Formation "${formationName}" failed pre-flight validation:\n${lines.join('\n')}`,
+      );
+      this.eventBus.emit('formation:failed', formationName, error);
+      throw error;
+    }
+
+    // Run pre-deploy hooks — failure aborts the deploy before anything is spawned
+    if (config.hooks?.pre?.length) {
+      try {
+        await runHooks(config.hooks.pre, 'pre', { formation: formationName }, (cmd) => {
+          this.eventBus.emit('hook:running', 'pre', cmd);
+        });
+      } catch (err) {
+        const error = err instanceof HookError ? err : new Error(String(err));
+        this.eventBus.emit('hook:failed', 'pre', err instanceof HookError ? err.command : '', error);
+        this.eventBus.emit('formation:failed', formationName, error);
+        throw error;
+      }
+    }
 
     // Deploy worms sequentially so each can accurately detect its new window
     let failureCount = 0;
@@ -112,6 +141,18 @@ export class Swarm {
       } catch {
         // Wallpaper mode unavailable, fall back to sending all to back
         await this.sendAllToBack();
+      }
+    }
+
+    // Run post-deploy hooks — failure is a warning, worms are already running
+    if (config.hooks?.post?.length) {
+      try {
+        await runHooks(config.hooks.post, 'post', { formation: formationName }, (cmd) => {
+          this.eventBus.emit('hook:running', 'post', cmd);
+        });
+      } catch (err) {
+        const error = err instanceof HookError ? err : new Error(String(err));
+        this.eventBus.emit('hook:failed', 'post', err instanceof HookError ? err.command : '', error);
       }
     }
 
@@ -200,6 +241,11 @@ export class Swarm {
     for (const worm of this.activeWorms.values()) {
       if (worm.hwnd) await worm.focus();
     }
+  }
+
+  async validate(config: FormationConfig): Promise<ValidationResult> {
+    const monitors = await this.platform.monitors.getAll();
+    return validateFormation(config, monitors, this.registry);
   }
 
   async expandWorm(wormId: string): Promise<void> {

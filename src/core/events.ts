@@ -13,6 +13,8 @@ export type SwormEventMap = {
   'voice:command': [raw: string, parsed: unknown];
   'hotkey:pressed': [action: string, args?: Record<string, unknown>];
   'worm:visibility': [visible: boolean];
+  'hook:running': [phase: 'pre' | 'post', command: string];
+  'hook:failed': [phase: 'pre' | 'post', command: string, error: Error];
 };
 
 type EventName = keyof SwormEventMap;
