@@ -37,7 +37,7 @@ export function deployCommand(
         }
 
         if (opts.dryRun) {
-          await dryRun(formation, getPlatform());
+          await dryRun(formation, getPlatform(), getSwarm);
           return;
         }
 
@@ -76,9 +76,28 @@ export function deployCommand(
     });
 }
 
-async function dryRun(formation: string, platform: PlatformAPI): Promise<void> {
+async function dryRun(
+  formation: string,
+  platform: PlatformAPI,
+  getSwarm: () => Swarm,
+): Promise<void> {
   const config = loadFormation(formation);
   const monitors = await platform.monitors.getAll();
+
+  // Run pre-flight validation and surface issues before showing the layout table
+  const swarm = getSwarm();
+  const validation = await swarm.validate(config);
+
+  console.log(chalk.bold(`\nDry run for formation: ${formation}\n`));
+
+  if (!validation.valid) {
+    console.log(chalk.red.bold('Pre-flight issues:'));
+    for (const issue of validation.issues) {
+      const prefix = issue.wormId ? chalk.yellow(`[${issue.wormId}]`) + ' ' : '';
+      console.log(`  ${chalk.red('✗')} ${prefix}${issue.message}`);
+    }
+    console.log();
+  }
 
   const table = new Table({
     head: [
@@ -91,18 +110,30 @@ async function dryRun(formation: string, platform: PlatformAPI): Promise<void> {
   });
 
   for (const wormConfig of config.worms) {
-    const monitor = resolveMonitor(wormConfig.monitor, monitors);
-    const rect = resolvePosition(wormConfig.position, monitor, config.grid);
-
-    table.push([
-      wormConfig.id,
-      wormConfig.type,
-      monitor.name,
-      `${rect.x}, ${rect.y}, ${rect.width}, ${rect.height}`,
-    ]);
+    try {
+      const monitorRef = config.monitors?.[wormConfig.monitor] ?? wormConfig.monitor;
+      const monitor = resolveMonitor(monitorRef, monitors);
+      const rect = resolvePosition(wormConfig.position, monitor, config.grid);
+      table.push([
+        wormConfig.id,
+        wormConfig.type,
+        monitor.name,
+        `${rect.x}, ${rect.y}, ${rect.width}, ${rect.height}`,
+      ]);
+    } catch {
+      table.push([
+        wormConfig.id,
+        wormConfig.type,
+        chalk.red(wormConfig.monitor),
+        chalk.red('(unresolvable)'),
+      ]);
+    }
   }
 
-  console.log(chalk.bold(`\nDry run for formation: ${formation}\n`));
   console.log(table.toString());
   console.log();
+
+  if (!validation.valid) {
+    process.exit(1);
+  }
 }

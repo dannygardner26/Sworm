@@ -5,6 +5,7 @@ import { WormTypeRegistry } from './registry.js';
 import { SwormEventBus } from './events.js';
 import { FormationLoader, resolveMonitor, resolvePosition } from './formation.js';
 import { WormNumbering } from './numbering.js';
+import { validateFormation, type ValidationResult } from './validate.js';
 
 export class Swarm {
   private platform: PlatformAPI;
@@ -51,6 +52,19 @@ export class Swarm {
 
     const formationName = config.name;
     const monitors = await this.platform.monitors.getAll();
+
+    // Pre-flight validation — fail fast before any process is spawned
+    const validation = validateFormation(config, monitors, this.registry);
+    if (!validation.valid) {
+      const lines = validation.issues.map((issue) =>
+        issue.wormId ? `  [${issue.wormId}] ${issue.message}` : `  ${issue.message}`,
+      );
+      const error = new Error(
+        `Formation "${formationName}" failed pre-flight validation:\n${lines.join('\n')}`,
+      );
+      this.eventBus.emit('formation:failed', formationName, error);
+      throw error;
+    }
 
     // Deploy worms sequentially so each can accurately detect its new window
     let failureCount = 0;
@@ -200,6 +214,11 @@ export class Swarm {
     for (const worm of this.activeWorms.values()) {
       if (worm.hwnd) await worm.focus();
     }
+  }
+
+  async validate(config: FormationConfig): Promise<ValidationResult> {
+    const monitors = await this.platform.monitors.getAll();
+    return validateFormation(config, monitors, this.registry);
   }
 
   async expandWorm(wormId: string): Promise<void> {
