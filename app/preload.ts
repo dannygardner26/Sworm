@@ -25,11 +25,22 @@ export interface SwormAPI {
     write(settings: any): Promise<{ ok: boolean; error?: string }>;
   };
   voice: {
+    ready(): void;
     start(): void;
     stop(): void;
     onStatus(callback: (status: string, message: string) => void): void;
     onResult(callback: (text: string) => void): void;
     onShortcut(callback: (shortcut: string) => void): void;
+  };
+  brain: {
+    process(text: string): Promise<{ response: string; error?: string }>;
+    onStatus(callback: (type: string, detail: string) => void): void;
+    onGetPanes(callback: (replyChannel: string) => void): void;
+    replyPanes(channel: string, panes: any[]): void;
+    onCreatePane(callback: (opts: { id: string; name: string; cmd?: string }) => void): void;
+  };
+  windowIds: {
+    onWindowIds(callback: (visible: boolean, label: string) => void): void;
   };
 }
 
@@ -58,6 +69,7 @@ contextBridge.exposeInMainWorld('sworm', {
     write: (settings: any) => ipcRenderer.invoke('settings:write', settings),
   },
   voice: {
+    ready: () => ipcRenderer.send('voice:ready'),
     start: () => ipcRenderer.send('voice:start'),
     stop: () => ipcRenderer.send('voice:stop'),
     onStatus: (callback: (status: string, message: string) => void) => {
@@ -68,6 +80,26 @@ contextBridge.exposeInMainWorld('sworm', {
     },
     onShortcut: (callback: (shortcut: string) => void) => {
       ipcRenderer.on('voice:shortcut', (_event, shortcut) => callback(shortcut));
+    },
+  },
+  brain: {
+    process: (text: string) => ipcRenderer.invoke('brain:process', text),
+    onStatus: (callback: (type: string, detail: string) => void) => {
+      ipcRenderer.on('brain:status', (_event, type, detail) => callback(type, detail));
+    },
+    onGetPanes: (callback: (replyChannel: string) => void) => {
+      ipcRenderer.on('brain:get-panes', (_event, channel) => callback(channel));
+    },
+    replyPanes: (channel: string, panes: any[]) => {
+      ipcRenderer.send(channel, panes);
+    },
+    onCreatePane: (callback: (opts: { id: string; name: string; cmd?: string }) => void) => {
+      ipcRenderer.on('brain:create-pane', (_event, opts) => callback(opts));
+    },
+  },
+  windowIds: {
+    onWindowIds: (callback: (visible: boolean, label: string) => void) => {
+      ipcRenderer.on('window:ids', (_event, visible, label) => callback(visible, label));
     },
   },
 } satisfies SwormAPI);

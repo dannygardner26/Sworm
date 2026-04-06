@@ -17,3 +17,4 @@ logos/logo_data.json
 
 # Claude Code
 .claude/
+.worktrees/

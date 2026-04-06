@@ -10,10 +10,29 @@ const node_path_1 = require("node:path");
 const node_os_1 = require("node:os");
 const node_readline_1 = require("node:readline");
 const node_fs_1 = require("node:fs");
-const node_os_2 = require("node:os");
+const settings_1 = require("../src/config/settings.cjs");
+const brain_tools_1 = require("./brain-tools.cjs");
+const LOG_PATH = (0, node_path_1.join)((0, node_os_1.tmpdir)(), 'sworm-debug.log');
+function log(msg) {
+    const line = `[${new Date().toISOString()}] ${msg}`;
+    console.log(line);
+    try {
+        (0, node_fs_1.appendFileSync)(LOG_PATH, line + '\n');
+    }
+    catch { }
+}
+log('[Sworm] Main process starting...');
 let mainWindow = null;
 let ptyProcess = null;
 let paneCounter = 0;
+let showWindowIds = false;
+async function sendWindowIds() {
+    if (!mainWindow)
+        return;
+    const windows = await (0, brain_tools_1.listClaudeWindows)();
+    const label = (0, brain_tools_1.formatWindowIdLabel)(windows.map((window) => ({ id: window.hwnd, title: window.title })));
+    mainWindow.webContents.send('window:ids', showWindowIds, label);
+}
 // Pending IPC responses
 const pending = new Map();
 function startPtyServer() {
@@ -34,7 +53,7 @@ function startPtyServer() {
             const msg = JSON.parse(line);
             switch (msg.type) {
                 case 'ready':
-                    console.log('[Sworm] PTY server ready');
+                    log('[Sworm] PTY server ready');
                     break;
                 case 'created': {
                     const resolve = pending.get(`create:${msg.id}`);
@@ -67,15 +86,24 @@ function sendToPty(msg) {
     ptyProcess?.stdin?.write(JSON.stringify(msg) + '\n');
 }
 function createWindow() {
+    // Load icon from multiple possible locations
+    const iconPaths = [
+        (0, node_path_1.join)(__dirname, 'sworm-icon.ico'),
+        (0, node_path_1.join)(__dirname, '..', 'app', 'sworm-icon.ico'),
+        (0, node_path_1.join)(__dirname, '..', 'logos', 'sworm-icon.png'),
+    ];
+    const iconPath = iconPaths.find(p => (0, node_fs_1.existsSync)(p)) || iconPaths[0];
+    const appIcon = electron_1.nativeImage.createFromPath(iconPath);
     mainWindow = new electron_1.BrowserWindow({
         width: 1400,
         height: 900,
         frame: false,
+        icon: appIcon,
         backgroundColor: '#0a0a0a',
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-            color: '#1a1a1a',
-            symbolColor: '#888',
+            color: '#0a0a0a',
+            symbolColor: '#333',
             height: 32,
         },
         webPreferences: {
@@ -86,6 +114,7 @@ function createWindow() {
     });
     mainWindow.maximize();
     mainWindow.loadFile((0, node_path_1.join)(__dirname, '..', 'app', 'renderer', 'index.html'));
+    mainWindow.webContents.on('did-finish-load', () => { void sendWindowIds(); });
     // Open DevTools with F12
     mainWindow.webContents.on('before-input-event', (_e, input) => {
         if (input.key === 'F12' && input.type === 'keyDown') {
@@ -160,253 +189,353 @@ electron_1.ipcMain.handle('git:worktree', (_event, opts) => {
 // ─── Settings IPC ──────────��───────────────────────────
 electron_1.ipcMain.handle('settings:read', () => {
     try {
-        const { readFileSync, existsSync } = require('fs');
-        const { join } = require('path');
-        const { homedir } = require('os');
-        const yaml = require('yaml');
-        const configPath = join(homedir(), '.sworm', 'config.yaml');
-        if (!existsSync(configPath)) {
-            // Return defaults
-            return {
-                voice: {
-                    enabled: false,
-                    pushToTalk: { enabled: true, hotkey: 'ctrl+shift+space' },
-                    wakeWord: { enabled: false, phrase: 'sworm' },
-                    whisper: { binaryPath: '', modelPath: '', sampleRate: 16000 },
-                    recorder: 'sox',
-                    pttTimeout: 5000,
-                    silenceChunks: 3,
-                    feedback: { chimeOnListen: true, chimeOnAcknowledge: true },
-                },
-                hotkeys: {
-                    enabled: true,
-                    bindings: [
-                        { key: 'ctrl+shift+space', action: 'voice-activate' },
-                        { key: 'ctrl+shift+s', action: 'toggle-visibility' },
-                        { key: 'ctrl+shift+k', action: 'kill-all' },
-                        { key: 'ctrl+shift+d', action: 'deploy-default' },
-                        { key: 'ctrl+shift+f', action: 'toggle-fullscreen' },
-                    ],
-                },
-                general: {
-                    defaultFormation: 'pilot',
-                    formationsDir: '',
-                    theme: 'dark',
-                },
-            };
-        }
-        const raw = readFileSync(configPath, 'utf-8');
-        return yaml.parse(raw) || {};
+        return (0, settings_1.loadSettings)();
     }
     catch {
-        return {};
+        return (0, settings_1.loadSettings)();
     }
 });
 electron_1.ipcMain.handle('settings:write', (_event, settings) => {
     try {
-        const { writeFileSync, mkdirSync } = require('fs');
-        const { join } = require('path');
-        const { homedir } = require('os');
-        const yaml = require('yaml');
-        const dir = join(homedir(), '.sworm');
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, 'config.yaml'), yaml.stringify(settings, { indent: 2 }), 'utf-8');
+        (0, settings_1.saveSettings)(settings);
         return { ok: true };
     }
     catch (e) {
         return { ok: false, error: String(e) };
     }
 });
-// ─── Voice Activation ──────────────────────────────────────
+// ─── Voice (local whisper transcription) ─────────────────
 let voiceRecording = false;
+let voiceRecordStart = 0;
 let voiceProcess = null;
-let currentWavPath = null;
-const voiceTempDir = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_2.tmpdir)(), 'sworm-voice-'));
-const WHISPER_PATH = (0, node_path_1.join)((0, node_os_1.homedir)(), '.sworm', 'voice', 'whisper-cli.exe');
-const MODEL_PATH = (0, node_path_1.join)((0, node_os_1.homedir)(), '.sworm', 'voice', 'models', 'ggml-tiny.en.bin');
+const voiceTempDir = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'sworm-voice-'));
+const DEFAULT_WHISPER_DIR = (0, node_path_1.join)((0, node_os_1.homedir)(), '.sworm', 'voice');
+function getSettings() {
+    return (0, settings_1.loadSettings)();
+}
+function getVoiceConfig() {
+    const settings = getSettings();
+    const configuredBinary = settings.voice.whisper.binaryPath.trim();
+    const configuredModel = settings.voice.whisper.modelPath.trim();
+    return {
+        whisperDir: DEFAULT_WHISPER_DIR,
+        whisperPath: configuredBinary || (0, node_path_1.join)(DEFAULT_WHISPER_DIR, 'whisper-cli.exe'),
+        modelPath: configuredModel || (0, node_path_1.join)(DEFAULT_WHISPER_DIR, 'models', 'ggml-tiny.en.bin'),
+        sampleRate: settings.voice.whisper.sampleRate,
+        recorder: settings.voice.recorder,
+        pttTimeout: settings.voice.pttTimeout,
+        silenceChunks: settings.voice.silenceChunks,
+        pushToTalkHotkey: settings.voice.pushToTalk.hotkey,
+    };
+}
 let cachedMicName = null;
 function getDefaultMic() {
     if (cachedMicName)
         return cachedMicName;
     try {
-        const result = (0, node_child_process_1.spawnSync)('ffmpeg', ['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'], {
-            timeout: 5000,
-        });
+        const result = (0, node_child_process_1.spawnSync)('ffmpeg', ['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'], { timeout: 5000 });
         const output = result.stderr?.toString() || '';
         const match = output.match(/"([^"]+)"\s*\(audio\)/);
         if (match) {
             cachedMicName = match[1];
             return cachedMicName;
         }
+        log(`[Voice] No DirectShow mic found. ffmpeg output: ${output.slice(0, 500)}`);
     }
-    catch { }
-    return 'Microphone';
-}
-function isWhisperReady() {
-    return (0, node_fs_1.existsSync)(WHISPER_PATH) && (0, node_fs_1.existsSync)(MODEL_PATH);
+    catch (e) {
+        log(`[Voice] Failed to list audio devices: ${e}`);
+    }
+    return null;
 }
 function startVoiceRecording() {
     if (voiceRecording)
-        return; // Use toggleVoice for toggle behavior
-    if (!isWhisperReady()) {
-        mainWindow?.webContents.send('voice:status', 'error', 'Whisper not set up. Run: sworm voice setup');
+        return;
+    const { whisperPath, modelPath, sampleRate } = getVoiceConfig();
+    if (!(0, node_fs_1.existsSync)(whisperPath) || !(0, node_fs_1.existsSync)(modelPath)) {
+        mainWindow?.webContents.send('voice:status', 'error', 'Whisper not set up');
         return;
     }
     voiceRecording = true;
-    mainWindow?.webContents.send('voice:status', 'listening', '');
-    console.log('[Voice] Recording...');
+    voiceRecordStart = Date.now();
     const wavPath = (0, node_path_1.join)(voiceTempDir, `voice-${Date.now()}.wav`);
-    currentWavPath = wavPath;
+    mainWindow?.webContents.send('voice:status', 'listening', '');
+    log('[Voice] Recording...');
     const micName = getDefaultMic();
+    if (!micName) {
+        voiceRecording = false;
+        mainWindow?.webContents.send('voice:status', 'error', 'No microphone found');
+        return;
+    }
     voiceProcess = (0, node_child_process_1.spawn)('ffmpeg', [
-        '-f', 'dshow',
-        '-i', `audio=${micName}`,
-        '-ar', '16000',
-        '-ac', '1',
-        '-t', '8',
-        '-y',
-        wavPath,
+        '-f', 'dshow', '-i', `audio=${micName}`,
+        '-ar', String(sampleRate), '-ac', '1', '-y', wavPath,
     ], { stdio: ['pipe', 'pipe', 'pipe'] });
-    voiceProcess.on('close', () => {
-        if (currentWavPath) {
-            const path = currentWavPath;
-            currentWavPath = null;
-            voiceRecording = false;
-            transcribeAndExecute(path);
-        }
-        else {
-            voiceRecording = false;
-            mainWindow?.webContents.send('voice:status', 'idle', '');
-        }
+    let ffmpegStderr = '';
+    voiceProcess.stderr?.on('data', (chunk) => {
+        ffmpegStderr += chunk.toString();
     });
     voiceProcess.on('error', (err) => {
-        console.error('[Voice] FFmpeg error:', err.message);
+        log(`[Voice] FFmpeg error: ${err.message}`);
         voiceRecording = false;
-        mainWindow?.webContents.send('voice:status', 'error', 'Mic capture failed: ' + err.message);
+        mainWindow?.webContents.send('voice:status', 'error', 'Mic capture failed');
     });
+    // Store path for stop handler
+    voiceProcess._wavPath = wavPath;
+    voiceProcess._ffmpegStderr = () => ffmpegStderr;
 }
 function stopVoiceRecording() {
-    if (!voiceRecording)
+    if (!voiceRecording || !voiceProcess)
         return;
-    console.log('[Voice] Stop recording');
-    // Send 'q' to ffmpeg to stop gracefully — this triggers the 'close' handler which transcribes
-    if (voiceProcess) {
-        try {
-            voiceProcess.stdin?.write('q');
-        }
-        catch { }
-        setTimeout(() => {
-            try {
-                if (voiceProcess && !voiceProcess.killed)
-                    voiceProcess.kill();
-            }
-            catch { }
-        }, 1000);
-    }
-}
-/** Toggle: start if idle, stop if recording */
-function toggleVoice() {
-    if (voiceRecording) {
-        stopVoiceRecording();
-    }
-    else {
-        startVoiceRecording();
-    }
-}
-function transcribeAndExecute(wavPath) {
-    mainWindow?.webContents.send('voice:status', 'processing', '');
-    console.log('[Voice] Transcribing...');
-    if (!(0, node_fs_1.existsSync)(wavPath)) {
-        mainWindow?.webContents.send('voice:status', 'idle', '');
-        return;
-    }
-    const result = (0, node_child_process_1.spawnSync)(WHISPER_PATH, [
-        '-m', MODEL_PATH,
-        '-f', wavPath,
-        '-l', 'en',
-        '--no-timestamps',
-    ], { timeout: 15000 });
+    voiceRecording = false;
+    log('[Voice] Stop recording');
+    const proc = voiceProcess;
+    const wavPath = proc._wavPath;
+    const ffmpegStderr = proc._ffmpegStderr;
+    voiceProcess = null;
     try {
-        (0, node_fs_1.unlinkSync)(wavPath);
+        proc.stdin?.write('q');
     }
     catch { }
-    let text = result.stdout?.toString().trim() || '';
-    // Strip whisper artifacts
-    text = text.replace(/\[BLANK_AUDIO\]/g, '').replace(/\(.*?\)/g, '').trim();
-    console.log('[Voice] Result:', text || '(empty)');
-    if (text) {
-        mainWindow?.webContents.send('voice:result', text);
+    mainWindow?.webContents.send('voice:status', 'processing', '');
+    proc.on('close', () => {
+        void transcribeVoiceRecording(wavPath, ffmpegStderr);
+    });
+    setTimeout(() => { try {
+        if (!proc.killed)
+            proc.kill();
     }
-    else {
-        mainWindow?.webContents.send('voice:status', 'error', 'No speech detected');
-        setTimeout(() => mainWindow?.webContents.send('voice:status', 'idle', ''), 2000);
+    catch { } }, 2000);
+}
+async function transcribeVoiceRecording(wavPath, ffmpegStderr) {
+    if (!(0, node_fs_1.existsSync)(wavPath)) {
+        log(`[Voice] No audio recorded. ffmpeg stderr: ${(ffmpegStderr?.() || '').slice(0, 500)}`);
+        mainWindow?.webContents.send('voice:status', 'error', 'No audio recorded');
         return;
     }
-    mainWindow?.webContents.send('voice:status', 'idle', '');
+    const { whisperPath, modelPath, whisperDir } = getVoiceConfig();
+    log('[Voice] Transcribing...');
+    try {
+        const text = await new Promise((resolve, reject) => {
+            const proc = (0, node_child_process_1.spawn)(whisperPath, [
+                '-m', modelPath, '-f', wavPath, '-l', 'en', '--no-timestamps',
+            ], { cwd: whisperDir, stdio: ['ignore', 'pipe', 'pipe'] });
+            let stdout = '';
+            let stderr = '';
+            proc.stdout?.on('data', (chunk) => {
+                stdout += chunk.toString();
+            });
+            proc.stderr?.on('data', (chunk) => {
+                stderr += chunk.toString();
+            });
+            proc.on('error', reject);
+            proc.on('close', (code) => {
+                if (code === 0) {
+                    resolve(stdout);
+                    return;
+                }
+                reject(new Error(stderr.trim() || `whisper exited with code ${code}`));
+            });
+        });
+        let cleaned = text.trim();
+        cleaned = cleaned.replace(/\[BLANK_AUDIO\]/g, '').replace(/\(.*?\)/g, '').trim();
+        const exactHallucinations = new Set(['thank', 'thanks', 'subscribe', 'like', 'comment', 'share', 'you', 'bye', 'see you', 'the end']);
+        if (exactHallucinations.has(cleaned.toLowerCase()) || /^\.*$/.test(cleaned))
+            cleaned = '';
+        log(`[Voice] Result: ${cleaned || '(empty)'}`);
+        if (cleaned) {
+            mainWindow?.webContents.send('voice:result', cleaned);
+        }
+        else {
+            mainWindow?.webContents.send('voice:status', 'error', 'Empty transcript');
+        }
+    }
+    catch (e) {
+        log(`[Voice] Whisper failed: ${e}`);
+        mainWindow?.webContents.send('voice:status', 'error', 'Transcription failed');
+    }
+    finally {
+        try {
+            (0, node_fs_1.unlinkSync)(wavPath);
+        }
+        catch { }
+    }
 }
-function registerVoiceShortcuts() {
-    // Ctrl+F9 = toggle: press to start, press again to stop
-    const cf9ok = electron_1.globalShortcut.register('Ctrl+F9', () => {
-        console.log('[Voice] Ctrl+F9 toggle');
+function toggleVoice() {
+    if (voiceRecording)
+        stopVoiceRecording();
+    else
+        startVoiceRecording();
+}
+// ─── Global Shortcuts ────────────────────────────────────
+function tryRegister(combos, handler) {
+    for (const combo of combos) {
+        const ok = electron_1.globalShortcut.register(combo, handler);
+        if (ok) {
+            log(`[Shortcut] Registered: ${combo}`);
+            return combo;
+        }
+        log(`[Shortcut] ${combo} TAKEN, trying next...`);
+    }
+    return null;
+}
+function registerGlobalShortcuts() {
+    // Toggle voice: Ctrl+Alt+V — tap to start listening, tap to stop
+    let lastToggle = 0;
+    const toggleKey = tryRegister(['Ctrl+Alt+V', 'F9'], () => {
+        const now = Date.now();
+        if (now - lastToggle < 300)
+            return;
+        lastToggle = now;
+        log('[Voice] Toggle pressed');
         toggleVoice();
     });
-    console.log('[Voice] Ctrl+F9 toggle:', cf9ok ? 'OK' : 'TAKEN');
-    // F9 = hold-to-talk: record while held, stop on release
-    // globalShortcut can't detect keyup, so we use before-input-event on the window
-    // AND register F9 globally to capture it even when app isn't focused
-    let f9Held = false;
-    const f9ok = electron_1.globalShortcut.register('F9', () => {
-        // Global F9 keydown — start recording if not already
-        if (!f9Held) {
-            f9Held = true;
-            console.log('[Voice] F9 held (start)');
-            if (!voiceRecording)
-                startVoiceRecording();
+    // Push-to-talk uses F10 because holding Alt can retrigger global shortcuts on Windows.
+    let pttKey = null;
+    let lastPttToggle = 0;
+    for (const combo of ['F10']) {
+        const ok = electron_1.globalShortcut.register(combo, () => {
+            const now = Date.now();
+            if (now - lastPttToggle < 300)
+                return;
+            lastPttToggle = now;
+            log('[Voice] PTT pressed');
+            toggleVoice();
+        });
+        if (ok) {
+            pttKey = combo;
+            log(`[Shortcut] Registered PTT: ${combo}`);
+            break;
+        }
+        log(`[Shortcut] ${combo} TAKEN, trying next...`);
+    }
+    // Toggle window visibility: Ctrl+`
+    const windowKey = tryRegister(['Ctrl+`', 'F8'], () => {
+        if (!mainWindow)
+            return;
+        if (mainWindow.isVisible()) {
+            mainWindow.hide();
+        }
+        else {
+            mainWindow.show();
+            mainWindow.focus();
         }
     });
-    console.log('[Voice] F9 hold-to-talk:', f9ok ? 'OK' : 'TAKEN');
-    // Detect F9 keyup via polling — globalShortcut fires repeatedly while held,
-    // so we detect "release" when it stops firing for >200ms
-    if (f9ok) {
-        let lastF9Time = 0;
-        const origHandler = electron_1.globalShortcut.isRegistered('F9');
-        // Override: track last fire time
-        electron_1.globalShortcut.unregister('F9');
-        electron_1.globalShortcut.register('F9', () => {
-            lastF9Time = Date.now();
-            if (!f9Held) {
-                f9Held = true;
-                console.log('[Voice] F9 held (start)');
-                if (!voiceRecording)
-                    startVoiceRecording();
-            }
-        });
-        // Poll to detect release (no repeat fires for 250ms = released)
-        setInterval(() => {
-            if (f9Held && Date.now() - lastF9Time > 250) {
-                f9Held = false;
-                console.log('[Voice] F9 released (stop)');
-                if (voiceRecording)
-                    stopVoiceRecording();
-            }
-        }, 100);
-    }
-    const label = (f9ok ? 'F9 hold' : '') + (f9ok && cf9ok ? ' | ' : '') + (cf9ok ? 'Ctrl+F9 toggle' : '');
-    mainWindow?.webContents.send('voice:shortcut', label || 'none');
+    const showIdsKey = tryRegister(['Ctrl+Alt+I', 'F7'], () => {
+        showWindowIds = !showWindowIds;
+        log(`[Window] toggle-window-ids ${showWindowIds ? 'on' : 'off'}`);
+        void sendWindowIds();
+    });
+    const parts = [];
+    if (pttKey)
+        parts.push(`${pttKey} push-to-talk`);
+    if (toggleKey)
+        parts.push(`${toggleKey} toggle voice`);
+    if (windowKey)
+        parts.push(`${windowKey} toggle window`);
+    if (showIdsKey)
+        parts.push(`${showIdsKey} show window ids`);
+    const label = parts.join(' | ') || 'no shortcuts available';
+    currentShortcutLabel = label;
+    mainWindow?.webContents.send('voice:shortcut', label);
+    log(`[Sworm] Global shortcuts: ${label}`);
     return label;
 }
-// IPC for voice from renderer
+let currentShortcutLabel = '';
 electron_1.ipcMain.on('voice:start', () => startVoiceRecording());
 electron_1.ipcMain.on('voice:stop', () => stopVoiceRecording());
-// ─── App Lifecycle ──────────────────────────────────────────
-electron_1.app.whenReady().then(() => {
-    // Remove default menu bar
-    electron_1.Menu.setApplicationMenu(null);
-    startPtyServer();
-    createWindow();
-    const shortcuts = registerVoiceShortcuts();
-    console.log(`[Sworm] Voice: ${shortcuts}`);
+electron_1.ipcMain.on('voice:ready', () => {
+    if (currentShortcutLabel)
+        mainWindow?.webContents.send('voice:shortcut', currentShortcutLabel);
 });
+// ─── Brain (LLM command interpretation) ──────────────────
+let brain = null;
+function initBrain() {
+    try {
+        const { SwormBrain } = require('./brain.cjs');
+        const ctx = {
+            sendToPty,
+            waitForPty: (id) => new Promise((resolve, reject) => {
+                pending.set(`create:${id}`, resolve);
+                setTimeout(() => { pending.delete(`create:${id}`); reject(new Error('PTY timeout')); }, 10000);
+            }),
+            createPaneInRenderer: (opts) => {
+                mainWindow?.webContents.send('brain:create-pane', opts);
+            },
+            getPanes: () => new Promise((resolve) => {
+                if (!mainWindow) {
+                    resolve([]);
+                    return;
+                }
+                const channel = `brain:panes-${Date.now()}`;
+                electron_1.ipcMain.once(channel, (_e, panes) => resolve(panes));
+                mainWindow.webContents.send('brain:get-panes', channel);
+                setTimeout(() => resolve([]), 3000); // fallback
+            }),
+            log,
+        };
+        const onStatus = (type, detail) => {
+            mainWindow?.webContents.send('brain:status', type, detail || '');
+            log(`[Brain] Status: ${type}${detail ? ' — ' + detail : ''}`);
+        };
+        brain = new SwormBrain(ctx, onStatus);
+        log('[Sworm] Brain initialized');
+    }
+    catch (e) {
+        log(`[Sworm] Brain init failed (AI commands disabled): ${e}`);
+    }
+}
+let brainBusy = false;
+electron_1.ipcMain.on('window:refresh-ids', () => {
+    void sendWindowIds();
+});
+electron_1.ipcMain.handle('brain:process', async (_e, text) => {
+    if (!brain)
+        return { response: '', error: 'Brain not initialized' };
+    if (brainBusy) {
+        log('[Brain] Busy, dropping: ' + text);
+        return { response: '', error: 'Brain is busy processing another command' };
+    }
+    brainBusy = true;
+    try {
+        const response = await brain.process(text);
+        return { response };
+    }
+    catch (e) {
+        return { response: '', error: String(e) };
+    }
+    finally {
+        brainBusy = false;
+    }
+});
+// ─── App Lifecycle ──────────────────────────────────────────
+// Single instance lock — if another instance launches, focus the existing window
+const gotLock = electron_1.app.requestSingleInstanceLock();
+log(`[Sworm] Single instance lock: ${gotLock}`);
+if (!gotLock) {
+    log('[Sworm] Another instance running, quitting');
+    electron_1.app.quit();
+}
+else {
+    electron_1.app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized())
+                mainWindow.restore();
+            if (!mainWindow.isVisible())
+                mainWindow.show();
+            mainWindow.focus();
+        }
+    });
+    electron_1.app.whenReady().then(() => {
+        electron_1.Menu.setApplicationMenu(null);
+        electron_1.globalShortcut.unregisterAll();
+        startPtyServer();
+        createWindow();
+        initBrain();
+        log('[Sworm] Window created, registering shortcuts...');
+        const shortcuts = registerGlobalShortcuts();
+        log(`[Sworm] Voice: ${shortcuts}`);
+    });
+}
 electron_1.app.on('will-quit', () => {
     electron_1.globalShortcut.unregisterAll();
 });

@@ -111,6 +111,10 @@ describe('parseVoiceCommand', () => {
     expect(parseVoiceCommand('can you just kill all')).toEqual({ action: 'kill-all' });
   });
 
+  it('does not discard single-word command requests that are still meaningful speech', () => {
+    expect(parseVoiceCommand('please status')).toEqual({ action: 'status' });
+  });
+
   // Unknown
   it('returns null for unrecognized input', () => {
     expect(parseVoiceCommand('hello world')).toBeNull();

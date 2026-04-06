@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "CommonJS",
     "outDir": "app-dist",
-    "rootDir": "app",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

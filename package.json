@@ -1,5 +1,6 @@
 {
   "name": "sworm",
+  "productName": "Sworm",
   "version": "0.2.0",
   "description": "Spatially-aware desktop orchestration — deploy AI agents and apps across multi-monitor setups via named formations",
   "type": "module",
@@ -11,7 +12,7 @@
     "build": "tsc",
     "dev": "tsx src/cli/index.ts",
     "start": "node dist/cli/index.js",
-    "app:build": "tsc -p tsconfig.electron.json && node -e \"const fs=require('fs');['main','preload'].forEach(f=>{const s='app-dist/'+f;if(fs.existsSync(s+'.js')){fs.renameSync(s+'.js',s+'.cjs')}})\"",
+    "app:build": "tsc -p tsconfig.electron.json && node scripts/cjs-rename.cjs",
     "app": "npm run app:build && electron .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -31,6 +32,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1022.0",
     "@electron/rebuild": "^4.0.3",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",

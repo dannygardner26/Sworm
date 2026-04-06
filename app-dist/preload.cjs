@@ -30,6 +30,7 @@ electron_1.contextBridge.exposeInMainWorld('sworm', {
         write: (settings) => electron_1.ipcRenderer.invoke('settings:write', settings),
     },
     voice: {
+        ready: () => electron_1.ipcRenderer.send('voice:ready'),
         start: () => electron_1.ipcRenderer.send('voice:start'),
         stop: () => electron_1.ipcRenderer.send('voice:stop'),
         onStatus: (callback) => {
@@ -40,6 +41,26 @@ electron_1.contextBridge.exposeInMainWorld('sworm', {
         },
         onShortcut: (callback) => {
             electron_1.ipcRenderer.on('voice:shortcut', (_event, shortcut) => callback(shortcut));
+        },
+    },
+    brain: {
+        process: (text) => electron_1.ipcRenderer.invoke('brain:process', text),
+        onStatus: (callback) => {
+            electron_1.ipcRenderer.on('brain:status', (_event, type, detail) => callback(type, detail));
+        },
+        onGetPanes: (callback) => {
+            electron_1.ipcRenderer.on('brain:get-panes', (_event, channel) => callback(channel));
+        },
+        replyPanes: (channel, panes) => {
+            electron_1.ipcRenderer.send(channel, panes);
+        },
+        onCreatePane: (callback) => {
+            electron_1.ipcRenderer.on('brain:create-pane', (_event, opts) => callback(opts));
+        },
+    },
+    windowIds: {
+        onWindowIds: (callback) => {
+            electron_1.ipcRenderer.on('window:ids', (_event, visible, label) => callback(visible, label));
         },
     },
 });
