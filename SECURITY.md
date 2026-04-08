@@ -28,3 +28,9 @@ Security concerns particularly relevant to Sworm:
 - **Agent spawning** — unauthorized process execution
 - **Cross-machine communication** — when team/sync features are implemented
 - **Formation injection** — malicious YAML that executes unintended commands
+- **Formation hooks** — `hooks.pre` / `hooks.post` in a formation file run as shell commands during deploy. Interpolation uses `${formation}`; hook processes also receive `SWORM_FORMATION` (and other `SWORM_*` keys derived from the hook context). Treat every formation like executable code: do not run `sworm deploy` on untrusted files.
+
+## User-facing hardening tips
+
+- Prefer formations you authored or reviewed; do not paste unknown YAML into `formations/`.
+- Avoid committing secrets into formation YAML; use environment variables for sensitive values where supported.

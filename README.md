@@ -45,7 +45,7 @@ Sworm solves this with declarative YAML formations. You describe which apps, ter
 - **Spatial formations** — define multi-monitor layouts in YAML, deploy with one command
 - **AI agents** — multi-provider LLM runtime with tool use (Anthropic, OpenAI, Gemini, Bedrock, Ollama)
 - **Voice control** — Whisper-powered speech commands for hands-free operation
-- **Global hotkeys** — Win32 keyboard shortcuts for instant formation switching
+- **Global hotkeys** — Win32 shortcuts while `sworm voice listen` is running (layout toggles, focus, deploy default, push-to-talk)
 - **Electron app** — rich desktop UI with terminal panes and widget system
 - **Wallpaper mode** — render agent windows as desktop wallpaper
 - **Git worktrees** — auto-create isolated branches for parallel work
@@ -80,6 +80,10 @@ worms:
     params:
       folder: "."
 ```
+
+## Hooks and security
+
+Formations may define `hooks.pre` and `hooks.post` arrays of shell commands. Those strings are executed on your machine when you deploy, using the system shell (same risk as running a script you downloaded). **Only deploy formations from sources you trust.** Strings can include `${formation}`; that value is interpolated and also exposed to the hook process as the environment variable `SWORM_FORMATION`. See [SECURITY.md](SECURITY.md) for reporting issues.
 
 ## Worm Types
 

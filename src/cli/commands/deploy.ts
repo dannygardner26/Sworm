@@ -66,6 +66,11 @@ export function deployCommand(
           spinner.text = `${chalk.cyan(wormId)} positioned`;
         });
 
+        bus.on('worm:died', (wormId, reason) => {
+          spinner.warn(`${chalk.yellow(wormId)} failed: ${chalk.dim(reason)}`);
+          spinner.start();
+        });
+
         try {
           await swarm.deploy(formation, { force: opts.force });
           spinner.stop();

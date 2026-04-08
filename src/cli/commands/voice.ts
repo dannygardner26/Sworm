@@ -48,12 +48,27 @@ function handleVoiceCommand(command: VoiceCommand, swarm: Swarm): void {
       }
       break;
 
-    case 'focus':
-      if (command.target) {
-        // Note: this was focusing, not killing — likely a bug in original. Keeping as-is.
-        swarm.kill(command.target).catch(() => {});
+    case 'focus': {
+      if (!command.target) {
+        printError('Focus requires a worm id or number (e.g. focus editor or focus 2).');
+        break;
       }
+      if (/^\d+$/.test(command.target)) {
+        const num = parseInt(command.target, 10);
+        if (num > 0) {
+          swarm.focusByNumber(num).then(
+            () => printSuccess(`Focused agent #${num}`),
+            (err) => printError(`Focus failed: ${err instanceof Error ? err.message : String(err)}`),
+          );
+        }
+        break;
+      }
+      swarm.focusById(command.target).then(
+        () => printSuccess(`Focused ${command.target}`),
+        (err) => printError(`Focus failed: ${err instanceof Error ? err.message : String(err)}`),
+      );
       break;
+    }
 
     case 'focus-number': {
       const num = parseInt(command.target ?? '0', 10);
@@ -90,6 +105,12 @@ function handleVoiceCommand(command: VoiceCommand, swarm: Swarm): void {
       swarm.sendAllToBack().then(
         () => printSuccess('All worms sent to back'),
         (err) => printError(`Failed: ${err instanceof Error ? err.message : String(err)}`),
+      );
+      break;
+
+    case 'shrink':
+      printInfo(
+        'Shrink is not implemented yet. Redeploy your formation to restore the tiled layout (e.g. sworm deploy --force pilot).',
       );
       break;
   }
@@ -192,13 +213,29 @@ export function voiceCommand(program: Command, getSwarm: () => Swarm): void {
           handleVoiceCommand(cmd, swarm);
         });
         await listener.start();
+        const { HotkeyManager } = await import('../../hotkeys/index.js');
+        const { handleSwarmHotkeyAction } = await import('../../hotkeys/swarm-hotkey-actions.js');
+        const hkmBridge = new HotkeyManager();
+        hkmBridge.onAction((action, args) => {
+          if (action === 'voice-activate') return;
+          void handleSwarmHotkeyAction(swarm, action, args).catch((err) => {
+            console.error('[sworm hotkey]', err instanceof Error ? err.message : err);
+          });
+        });
+        hkmBridge.start();
         printSuccess(`Bridge listener on port ${opts.port}`);
         printInfo('Press Ctrl+C to stop.');
         await new Promise<void>((resolve) => {
           process.on('SIGINT', () => {
             listener.stop().then(
-              () => resolve(),
-              () => resolve(),
+              () => {
+                hkmBridge.stop();
+                resolve();
+              },
+              () => {
+                hkmBridge.stop();
+                resolve();
+              },
             );
           });
         });
@@ -236,13 +273,17 @@ export function voiceCommand(program: Command, getSwarm: () => Swarm): void {
         handleVoiceCommand(cmd, swarm);
       });
 
-      // Register push-to-talk hotkey
       const { HotkeyManager } = await import('../../hotkeys/index.js');
+      const { handleSwarmHotkeyAction } = await import('../../hotkeys/swarm-hotkey-actions.js');
       const hkm = new HotkeyManager();
-      hkm.onAction((action) => {
+      hkm.onAction((action, args) => {
         if (action === 'voice-activate') {
           va.startPTT();
+          return;
         }
+        void handleSwarmHotkeyAction(swarm, action, args).catch((err) => {
+          console.error('[sworm hotkey]', err instanceof Error ? err.message : err);
+        });
       });
       hkm.start();
 
