@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { AgentConfig, AgentTool } from './types.js';
 
 // Import types from providers — these will resolve after merge
@@ -78,6 +81,14 @@ export class AgentRuntime {
 
     for (let i = 0; i < maxIterations && this.running; i++) {
       try {
+        // Drain any team messages injected from the relay between iterations
+        const injected = this.drainInbox();
+        for (const msg of injected) {
+          this.outputHandler({ type: 'text', content: `[Team Message] ${msg.content}` });
+          const header = msg.fromAgentId ? `[Message from agent ${msg.fromAgentId}]` : '[Incoming team message]';
+          this.messages.push({ role: 'user', content: `${header} ${msg.content}` });
+        }
+
         const response = await this.provider.chat(this.messages, toolDefs);
 
         // Handle text content
@@ -137,5 +148,28 @@ export class AgentRuntime {
 
   stop(): void {
     this.running = false;
+  }
+
+  private drainInbox(): Array<{ content: string; fromAgentId?: string }> {
+    if (!this.config.agentId) return [];
+    const inboxPath = join(homedir(), '.sworm', 'agent-inbox', `${this.config.agentId}.jsonl`);
+    if (!existsSync(inboxPath)) return [];
+    try {
+      const raw = readFileSync(inboxPath, 'utf-8').trim();
+      writeFileSync(inboxPath, '', 'utf-8');
+      if (!raw) return [];
+      return raw
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            return JSON.parse(line) as { content: string; fromAgentId?: string };
+          } catch {
+            return { content: line };
+          }
+        });
+    } catch {
+      return [];
+    }
   }
 }

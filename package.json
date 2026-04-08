@@ -34,6 +34,8 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1022.0",
     "@electron/rebuild": "^4.0.3",
+    "@rolldown/binding-win32-x64-msvc": "^1.0.0-rc.13",
+    "@types/qrcode-terminal": "^0.12.2",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
@@ -45,6 +47,8 @@
     "koffi": "^2.15.2",
     "node-pty": "^1.1.0",
     "ora": "^9.3.0",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.20.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
@@ -52,6 +56,7 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "electron-builder": "^26.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",

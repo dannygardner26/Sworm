@@ -5,7 +5,7 @@
  */
 
 import { AgentRuntime } from './runtime.js';
-import { createAgentTools } from './tools.js';
+import { createAgentTools, createTeamTools } from './tools.js';
 import type { AgentConfig } from './types.js';
 
 // Parse CLI args
@@ -16,6 +16,8 @@ function parseArgs(): AgentConfig & { providerName: string; modelOverride?: stri
   let cwd = process.cwd();
   let prompt = '';
   let systemPrompt: string | undefined;
+  let agentId: string | undefined;
+  let teamId: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -33,6 +35,12 @@ function parseArgs(): AgentConfig & { providerName: string; modelOverride?: stri
         break;
       case '--system':
         systemPrompt = args[++i];
+        break;
+      case '--agent-id':
+        agentId = args[++i];
+        break;
+      case '--team-id':
+        teamId = args[++i];
         break;
     }
   }
@@ -54,6 +62,8 @@ function parseArgs(): AgentConfig & { providerName: string; modelOverride?: stri
     systemPrompt,
     userPrompt: prompt,
     workingDir: cwd,
+    agentId,
+    teamId,
   };
 }
 
@@ -79,7 +89,10 @@ async function main() {
     process.exit(1);
   }
 
-  const tools = createAgentTools(config.workingDir);
+  const tools = [
+    ...createAgentTools(config.workingDir),
+    ...(config.agentId && config.teamId ? createTeamTools(config.agentId, config.teamId) : []),
+  ];
 
   const runtime = new AgentRuntime(config, llmProvider, tools, (output) => {
     switch (output.type) {

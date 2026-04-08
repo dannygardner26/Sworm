@@ -18,4 +18,8 @@ export interface AgentConfig {
   workingDir: string;
   maxIterations?: number; // default: 50
   maxTokens?: number; // default: 4096
+  /** Worm ID of this agent — used for team inbox routing */
+  agentId?: string;
+  /** Team ID — enables the team_message tool when set */
+  teamId?: string;
 }

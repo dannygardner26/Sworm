@@ -13,6 +13,7 @@ interface AIAgentWormParams {
   prompt: string; // Task for the agent
   systemPrompt?: string; // Override system prompt
   shell?: 'wt' | 'cmd' | 'powershell';
+  teamId?: string; // Team ID — enables team_message tool
 }
 
 export class AIAgentWorm extends Worm {
@@ -71,9 +72,12 @@ export class AIAgentWorm extends Worm {
       workingDir,
       '--prompt',
       params.prompt,
+      '--agent-id',
+      this.id,
     ];
     if (params.model) agentArgs.push('--model', params.model);
     if (params.systemPrompt) agentArgs.push('--system', params.systemPrompt);
+    if (params.teamId) agentArgs.push('--team-id', params.teamId);
 
     const agentCmd = `npx ${agentArgs.join(' ')}`;
 

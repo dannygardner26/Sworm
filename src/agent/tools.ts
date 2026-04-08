@@ -3,6 +3,97 @@ import { execSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import type { AgentTool } from './types.js';
 
+/**
+ * Team tools injected into agents that are running in a team context.
+ * Requires agentId (the worm's own ID) and teamId.
+ */
+export function createTeamTools(agentId: string, teamId: string): AgentTool[] {
+  return [
+    {
+      name: 'team_message',
+      description: "Send a message or task to an agent running on a team member's machine",
+      parameters: {
+        type: 'object',
+        properties: {
+          peer: { type: 'string', description: "Target peer's display name or peer ID" },
+          message: { type: 'string', description: 'What to tell their agent' },
+          agent_id: {
+            type: 'string',
+            description: 'Worm ID of the specific agent to target (optional — omit to reach any running agent)',
+          },
+          await_response: {
+            type: 'boolean',
+            description: 'Wait for acknowledgement before continuing (default: false)',
+          },
+        },
+        required: ['peer', 'message'],
+      },
+      async execute(args) {
+        try {
+          const { loadTeam } = await import('../team/team-store.js');
+          const { loadIdentity } = await import('../team/identity.js');
+          const { RelayClient } = await import('../team/relay-client.js');
+          const { randomUUID } = await import('node:crypto');
+
+          const t = loadTeam(teamId);
+          if (!t) return { output: '', error: `Team "${teamId}" not found` };
+
+          const identity = loadIdentity();
+          if (!identity) return { output: '', error: 'No local identity found' };
+
+          const peerArg = args.peer as string;
+          const target = t.members.find(
+            (m) =>
+              m.peerId === peerArg ||
+              m.displayName.toLowerCase() === peerArg.toLowerCase(),
+          );
+          if (!target) {
+            return { output: '', error: `Peer "${peerArg}" not found in team "${t.name}"` };
+          }
+          if (!target.encryptionPublicKey) {
+            return {
+              output: '',
+              error: `No encryption key for ${target.displayName}. Ask them to run: sworm team connect ${teamId}`,
+            };
+          }
+
+          const client = new RelayClient(identity, teamId, { relayUrl: t.relayUrl });
+          try {
+            await client.connect();
+          } catch {
+            return { output: '', error: `Could not connect to relay at ${t.relayUrl}` };
+          }
+
+          if (!client.isOnline(target.peerId)) {
+            client.disconnect();
+            return {
+              output: '',
+              error: `${target.displayName} is offline — they must be running \`sworm team connect ${teamId}\` to receive agent messages`,
+            };
+          }
+
+          const msg = {
+            type: 'agent_message' as const,
+            fromAgentId: agentId,
+            toAgentId: args.agent_id as string | undefined,
+            content: args.message as string,
+            messageId: randomUUID(),
+          };
+
+          client.sendEncrypted(target.peerId, msg, target.encryptionPublicKey);
+          await new Promise((r) => setTimeout(r, 300));
+          client.disconnect();
+
+          const targetLabel = args.agent_id ? ` (agent: ${args.agent_id})` : '';
+          return { output: `Message sent to ${target.displayName}${targetLabel}` };
+        } catch (e) {
+          return { output: '', error: String(e) };
+        }
+      },
+    },
+  ];
+}
+
 export function createAgentTools(workingDir: string): AgentTool[] {
   const absDir = resolve(workingDir);
 

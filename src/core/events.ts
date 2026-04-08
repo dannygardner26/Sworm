@@ -3,7 +3,8 @@ import type { MonitorInfo } from '../platform/types.js';
 
 export type SwormEventMap = {
   'formation:deploying': [formation: string];
-  'formation:deployed': [formation: string];
+  'formation:deployed': [formation: string, wormCount: number];
+  'formation:killed': [formation: string | null];
   'formation:failed': [formation: string, error: Error];
   'worm:spawning': [wormId: string];
   'worm:running': [wormId: string, hwnd: number];

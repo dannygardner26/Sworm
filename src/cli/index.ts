@@ -18,6 +18,8 @@ import { statusCommand } from './commands/status.js';
 import { monitorsCommand } from './commands/monitors.js';
 import { voiceCommand } from './commands/voice.js';
 import { runCommand } from './commands/run.js';
+import { teamCommand } from './commands/team.js';
+import { relayCommand } from './commands/relay.js';
 
 import type { PlatformAPI } from '../platform/types.js';
 
@@ -102,6 +104,8 @@ statusCommand(program, getSwarm);
 monitorsCommand(program, getPlatform);
 voiceCommand(program, getSwarm);
 runCommand(program, getSwarm);
+teamCommand(program, getSwarm);
+relayCommand(program);
 
 // Default action when no command is given: show status + available formations
 if (process.argv.length <= 2) {

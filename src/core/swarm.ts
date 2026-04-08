@@ -156,7 +156,7 @@ export class Swarm {
       }
     }
 
-    this.eventBus.emit('formation:deployed', formationName);
+    this.eventBus.emit('formation:deployed', formationName, this.activeWorms.size);
   }
 
   async kill(target?: string): Promise<void> {
@@ -179,7 +179,9 @@ export class Swarm {
       await Promise.allSettled(killPromises);
       this.activeWorms.clear();
       this.numbering.reset();
+      const killedFormation = this.activeFormation;
       this.activeFormation = null;
+      this.eventBus.emit('formation:killed', killedFormation);
       return;
     }
 
@@ -259,5 +261,12 @@ export class Swarm {
 
   async fullscreenWorm(wormId: string): Promise<void> {
     await this.expandWorm(wormId);
+  }
+
+  /** Returns IDs of all currently running AI agent worms. */
+  getAgentWormIds(): string[] {
+    return [...this.activeWorms.values()]
+      .filter((w) => w.type === 'ai-agent')
+      .map((w) => w.id);
   }
 }
