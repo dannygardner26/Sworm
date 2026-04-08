@@ -9,7 +9,6 @@ import { ClaudeWorm } from '../worms/claude-worm.js';
 import { IDEWorm } from '../worms/ide-worm.js';
 import { AppWorm } from '../worms/app-worm.js';
 import { AIAgentWorm } from '../worms/ai-agent-worm.js';
-import { HotkeyManager } from '../hotkeys/index.js';
 
 import { deployCommand } from './commands/deploy.js';
 import { killCommand } from './commands/kill.js';
@@ -55,43 +54,6 @@ function getSwarm(): Swarm {
     _swarm = new Swarm(platform, registry);
   }
   return _swarm;
-}
-
-// Initialize hotkey manager for persistent commands
-let _hotkeyManager: HotkeyManager | null = null;
-
-function initHotkeys(): void {
-  if (_hotkeyManager) return;
-  _hotkeyManager = new HotkeyManager();
-  const swarm = getSwarm();
-
-  _hotkeyManager.onAction(async (action, args) => {
-    try {
-      switch (action) {
-        case 'toggle-visibility':
-          await swarm.toggleVisibility();
-          break;
-        case 'focus-worm': {
-          const num = (args?.number as number) ?? 0;
-          if (num > 0) await swarm.focusByNumber(num);
-          break;
-        }
-        case 'toggle-fullscreen':
-          // TODO: track focused worm for fullscreen toggle
-          break;
-        case 'kill-all':
-          await swarm.kill();
-          break;
-        case 'deploy-default':
-          await swarm.deploy('pilot');
-          break;
-      }
-    } catch {
-      // Silently ignore hotkey errors
-    }
-  });
-
-  _hotkeyManager.start();
 }
 
 // Register all commands

@@ -17,6 +17,8 @@ export class Swarm {
   private activeFormation: string | null = null;
   private numbering = new WormNumbering();
   private visible = true;
+  /** Updated when focusing via hotkey/voice number; used for toggle-fullscreen fallback. */
+  private lastFocusedWormId: string | null = null;
 
   constructor(platform: PlatformAPI, registry: WormTypeRegistry, formationsDir?: string) {
     this.platform = platform;
@@ -112,12 +114,19 @@ export class Swarm {
       }
     }
 
-    if (failureCount > 0) {
-      const error = new Error(`${failureCount}/${config.worms.length} worms failed to deploy`);
-      this.eventBus.emit('formation:failed', formationName, error);
-      if (failureCount === config.worms.length) {
-        throw error;
-      }
+    const deployError =
+      failureCount > 0
+        ? new Error(
+            `${failureCount}/${config.worms.length} worms failed to deploy. Successful worms are still running; use sworm status / sworm kill.`,
+          )
+        : null;
+
+    if (deployError) {
+      this.eventBus.emit('formation:failed', formationName, deployError);
+    }
+
+    if (failureCount === config.worms.length) {
+      throw deployError!;
     }
 
     this.activeFormation = formationName;
@@ -144,8 +153,8 @@ export class Swarm {
       }
     }
 
-    // Run post-deploy hooks — failure is a warning, worms are already running
-    if (config.hooks?.post?.length) {
+    // Post-deploy hooks only when every worm succeeded (partial deploy skips post)
+    if (failureCount === 0 && config.hooks?.post?.length) {
       try {
         await runHooks(config.hooks.post, 'post', { formation: formationName }, (cmd) => {
           this.eventBus.emit('hook:running', 'post', cmd);
@@ -156,7 +165,13 @@ export class Swarm {
       }
     }
 
-    this.eventBus.emit('formation:deployed', formationName);
+    if (failureCount === 0) {
+      this.eventBus.emit('formation:deployed', formationName);
+    }
+
+    if (deployError) {
+      throw deployError;
+    }
   }
 
   async kill(target?: string): Promise<void> {
@@ -179,6 +194,7 @@ export class Swarm {
       await Promise.allSettled(killPromises);
       this.activeWorms.clear();
       this.numbering.reset();
+      this.lastFocusedWormId = null;
       this.activeFormation = null;
       return;
     }
@@ -196,6 +212,7 @@ export class Swarm {
       this.eventBus.emit('worm:died', worm.id, 'killed');
       this.activeWorms.delete(target);
       this.numbering.remove(target);
+      if (this.lastFocusedWormId === target) this.lastFocusedWormId = null;
       return;
     }
 
@@ -216,6 +233,16 @@ export class Swarm {
     const worm = this.activeWorms.get(wormId);
     if (!worm) throw new Error(`Worm ${wormId} not found`);
     await worm.focus();
+    this.lastFocusedWormId = wormId;
+  }
+
+  async focusById(wormId: string): Promise<void> {
+    const worm = this.activeWorms.get(wormId);
+    if (!worm?.hwnd) {
+      throw new Error(`Worm "${wormId}" not found or has no window`);
+    }
+    await worm.focus();
+    this.lastFocusedWormId = wormId;
   }
 
   getByNumber(n: number): string | undefined {
@@ -259,5 +286,22 @@ export class Swarm {
 
   async fullscreenWorm(wormId: string): Promise<void> {
     await this.expandWorm(wormId);
+  }
+
+  /**
+   * Fullscreen the worm last focused via hotkey/voice, else #[1], else any active worm.
+   */
+  async fullscreenPreferredWorm(): Promise<void> {
+    let id = this.lastFocusedWormId;
+    if (id && !this.activeWorms.has(id)) id = null;
+    if (!id) {
+      const n1 = this.getByNumber(1);
+      if (n1) id = n1;
+    }
+    if (!id && this.activeWorms.size > 0) {
+      id = this.activeWorms.keys().next().value ?? null;
+    }
+    if (!id) throw new Error('No active worms');
+    await this.fullscreenWorm(id);
   }
 }
